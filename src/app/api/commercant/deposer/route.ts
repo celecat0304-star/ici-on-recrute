@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const CONTRATS_VALIDES = ["CDI", "CDD", "Saisonnier", "Extra", "Apprentissage"];
 const LIMITE_DEPOTS_PAR_HEURE = 5;
+const BUCKET_PHOTOS = "offres-commercants";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -21,6 +22,12 @@ export async function POST(request: NextRequest) {
     captchaA,
     captchaB,
     captchaReponse,
+    sourceImage, // "upload" | "pexels" | "aucune"
+    photoBase64,
+    consentementPhoto,
+    pexelsUrl,
+    pexelsPhotographe,
+    pexelsLienPhoto,
   } = body ?? {};
 
   // Piège à robots : un humain laisse ce champ vide
@@ -53,6 +60,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (sourceImage === "upload" && !consentementPhoto) {
+    return NextResponse.json(
+      {
+        error:
+          "Merci de confirmer que cette photo vous appartient et que les personnes visibles ont donné leur accord.",
+      },
+      { status: 400 }
+    );
+  }
+
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "inconnu";
 
@@ -75,6 +92,30 @@ export async function POST(request: NextRequest) {
   const siretNettoye =
     typeof siret === "string" ? siret.replace(/\s/g, "") : null;
 
+  let imageUrl: string | null = null;
+
+  if (sourceImage === "upload" && typeof photoBase64 === "string") {
+    const correspondance = photoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!correspondance) {
+      return NextResponse.json({ error: "Image invalide." }, { status: 400 });
+    }
+    const tampon = Buffer.from(correspondance[2], "base64");
+    if (tampon.byteLength > 3 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image trop volumineuse." }, { status: 400 });
+    }
+    const chemin = `${crypto.randomUUID()}.jpg`;
+    const { error: erreurUpload } = await supabase.storage
+      .from(BUCKET_PHOTOS)
+      .upload(chemin, tampon, { contentType: "image/jpeg" });
+
+    if (erreurUpload) {
+      return NextResponse.json({ error: erreurUpload.message }, { status: 500 });
+    }
+
+    imageUrl = supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(chemin).data
+      .publicUrl;
+  }
+
   const { error } = await supabase.from("offres_commercants").insert({
     ville_id: villeId,
     nom_commerce: nomCommerce,
@@ -87,6 +128,12 @@ export async function POST(request: NextRequest) {
     comment_postuler: commentPostuler,
     siret: siretNettoye || null,
     statut: "en_attente",
+    image_url:
+      sourceImage === "pexels" ? pexelsUrl || null : sourceImage === "upload" ? imageUrl : null,
+    image_source: sourceImage === "upload" || sourceImage === "pexels" ? sourceImage : "aucune",
+    pexels_photographe: sourceImage === "pexels" ? pexelsPhotographe || null : null,
+    pexels_url: sourceImage === "pexels" ? pexelsLienPhoto || null : null,
+    consentement_photo: sourceImage === "upload" ? Boolean(consentementPhoto) : false,
   });
 
   if (error) {

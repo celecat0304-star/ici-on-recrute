@@ -25,6 +25,9 @@ function champsAffichage(offre: OffreAffichee) {
       tempsTravail: offre.temps_travail,
       description: offre.description,
       sourceLabel: "Commerçant du coin",
+      imageUrl: offre.image_url,
+      creditPexels:
+        offre.image_source === "pexels" ? offre.pexels_photographe : null,
     };
   }
   return {
@@ -35,6 +38,8 @@ function champsAffichage(offre: OffreAffichee) {
     tempsTravail: offre.duree_travail,
     description: offre.description,
     sourceLabel: "France Travail",
+    imageUrl: null as string | null,
+    creditPexels: null as string | null,
   };
 }
 
@@ -197,6 +202,22 @@ export default function BorneClient({
               className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-7 bg-jaune/90 rotate-2 shadow-sm"
               aria-hidden="true"
             />
+          )}
+
+          {infos.imageUrl && (
+            <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={infos.imageUrl}
+                alt=""
+                className="w-full max-h-64 object-cover rounded-xl"
+              />
+              {infos.creditPexels && (
+                <p className="text-sm opacity-60 mt-1">
+                  Photo : {infos.creditPexels} / Pexels
+                </p>
+              )}
+            </div>
           )}
 
           {infos.contrat && (

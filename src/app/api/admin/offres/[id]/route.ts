@@ -8,15 +8,15 @@ export async function PATCH(
   const { id } = await params;
   const { action, motif } = await request.json();
 
-  if (!["publier", "refuser"].includes(action)) {
+  if (!["publier", "publier_sans_image", "refuser"].includes(action)) {
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
-  const nouveauStatut = action === "publier" ? "publiee" : "refusee";
+  const nouveauStatut = action === "refuser" ? "refusee" : "publiee";
 
   const dateExpiration =
-    action === "publier"
+    nouveauStatut === "publiee"
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       : null;
 
@@ -26,6 +26,9 @@ export async function PATCH(
       statut: nouveauStatut,
       motif_refus: action === "refuser" ? motif ?? null : null,
       date_expiration: dateExpiration,
+      ...(action === "publier_sans_image"
+        ? { image_url: null, image_source: "aucune", pexels_photographe: null, pexels_url: null }
+        : {}),
     })
     .eq("id", id);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PhotoChooser, { type SelectionPhoto } from "./PhotoChooser";
 
 const CONTRATS = ["CDI", "CDD", "Saisonnier", "Extra", "Apprentissage"];
 
@@ -13,6 +14,10 @@ export default function CommercantForm({
   const [erreur, setErreur] = useState("");
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [description, setDescription] = useState("");
+  const [poste, setPoste] = useState("");
+  const [selectionPhoto, setSelectionPhoto] = useState<SelectionPhoto>({
+    sourceImage: "aucune",
+  });
 
   const [captcha, setCaptcha] = useState<{ a: number; b: number } | null>(
     null
@@ -47,6 +52,7 @@ export default function CommercantForm({
       captchaA: captcha.a,
       captchaB: captcha.b,
       captchaReponse: donnees.get("captchaReponse"),
+      ...selectionPhoto,
     };
 
     const res = await fetch("/api/commercant/deposer", {
@@ -100,7 +106,13 @@ export default function CommercantForm({
       </Champ>
 
       <Champ label="Poste" required>
-        <input name="poste" required className="input" />
+        <input
+          name="poste"
+          required
+          value={poste}
+          onChange={(e) => setPoste(e.target.value)}
+          className="input"
+        />
       </Champ>
 
       <Champ label="Contrat" required>
@@ -157,6 +169,8 @@ export default function CommercantForm({
       <Champ label="Numéro de SIRET (si vous l'avez)">
         <input name="siret" placeholder="14 chiffres" className="input" />
       </Champ>
+
+      <PhotoChooser poste={poste} onChange={setSelectionPhoto} />
 
       <div className="hidden" aria-hidden="true">
         <label>

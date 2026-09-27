@@ -37,7 +37,7 @@ export default async function BornePage({
       supabase
         .from("offres_commercants")
         .select(
-          "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, image_url"
+          "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, image_url, image_source, pexels_photographe"
         )
         .eq("ville_id", borne.ville_id)
         .eq("statut", "publiee")

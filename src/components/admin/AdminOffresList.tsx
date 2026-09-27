@@ -16,7 +16,12 @@ export type OffreCommercantAdmin = {
   siret: string | null;
   created_at: string;
   ville_nom: string;
+  image_url: string | null;
+  image_source: string | null;
+  pexels_photographe: string | null;
 };
+
+type Action = "publier" | "publier_sans_image" | "refuser";
 
 export default function AdminOffresList({
   offres,
@@ -26,7 +31,7 @@ export default function AdminOffresList({
   const router = useRouter();
   const [enCours, setEnCours] = useState<string | null>(null);
 
-  const agir = async (id: string, action: "publier" | "refuser") => {
+  const agir = async (id: string, action: Action) => {
     let motif: string | null = null;
     if (action === "refuser") {
       motif = window.prompt("Motif du refus (optionnel) :") ?? "";
@@ -67,6 +72,21 @@ export default function AdminOffresList({
               .filter(Boolean)
               .join(" · ")}
           </p>
+          {offre.image_url && (
+            <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={offre.image_url}
+                alt=""
+                className="max-w-xs max-h-48 object-cover rounded-lg"
+              />
+              {offre.image_source === "pexels" && offre.pexels_photographe && (
+                <p className="text-xs opacity-60 mt-1">
+                  Photo : {offre.pexels_photographe} / Pexels
+                </p>
+              )}
+            </div>
+          )}
           {offre.description && <p>{offre.description}</p>}
           <p className="text-sm">
             <strong>Comment postuler :</strong> {offre.comment_postuler}
@@ -74,7 +94,7 @@ export default function AdminOffresList({
           {offre.siret && (
             <p className="text-sm opacity-70">SIRET : {offre.siret}</p>
           )}
-          <div className="flex gap-3 mt-3">
+          <div className="flex flex-wrap gap-3 mt-3">
             <button
               onClick={() => agir(offre.id, "publier")}
               disabled={enCours === offre.id}
@@ -82,6 +102,15 @@ export default function AdminOffresList({
             >
               Publier
             </button>
+            {offre.image_url && (
+              <button
+                onClick={() => agir(offre.id, "publier_sans_image")}
+                disabled={enCours === offre.id}
+                className="min-h-[48px] px-6 rounded-lg border-2 border-vert text-vert font-bold"
+              >
+                Publier sans l&apos;image
+              </button>
+            )}
             <button
               onClick={() => agir(offre.id, "refuser")}
               disabled={enCours === offre.id}

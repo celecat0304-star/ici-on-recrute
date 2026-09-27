@@ -25,6 +25,8 @@ export type OffreCommercantPublique = {
   description: string | null;
   comment_postuler: string;
   image_url: string | null;
+  image_source: string | null;
+  pexels_photographe: string | null;
 };
 
 export type OffreAffichee =
