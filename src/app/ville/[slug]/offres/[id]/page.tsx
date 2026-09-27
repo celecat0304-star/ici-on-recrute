@@ -17,6 +17,7 @@ async function chargerOffre(villeId: string, id: string) {
     .eq("id", id)
     .eq("ville_id", villeId)
     .eq("statut", "publiee")
+    .gte("date_expiration", new Date().toISOString().slice(0, 10))
     .maybeSingle();
 
   if (offreCommercant) {

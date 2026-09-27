@@ -8,12 +8,34 @@ export async function PATCH(
   const { id } = await params;
   const { action, motif } = await request.json();
 
-  if (!["publier", "publier_sans_image", "refuser"].includes(action)) {
+  const actionsValides = [
+    "publier",
+    "publier_sans_image",
+    "refuser",
+    "retirer",
+    "renouveler",
+  ];
+  if (!actionsValides.includes(action)) {
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
-  const nouveauStatut = action === "refuser" ? "refusee" : "publiee";
+
+  if (action === "renouveler") {
+    const { error } = await supabase
+      .from("offres_commercants")
+      .update({
+        date_expiration: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10),
+      })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const nouveauStatut =
+    action === "refuser" ? "refusee" : action === "retirer" ? "expiree" : "publiee";
 
   const dateExpiration =
     nouveauStatut === "publiee"

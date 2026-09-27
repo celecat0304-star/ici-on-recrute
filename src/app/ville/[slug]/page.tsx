@@ -60,6 +60,7 @@ export default async function VillePage({
         )
         .eq("ville_id", ville.id)
         .eq("statut", "publiee")
+        .gte("date_expiration", new Date().toISOString().slice(0, 10))
         .order("created_at", { ascending: false }),
     ]);
 

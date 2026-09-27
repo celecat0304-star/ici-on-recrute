@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     .select("id, ville_id, nom_commerce, poste, email_contact")
     .eq("id", offreId)
     .eq("statut", "publiee")
+    .gte("date_expiration", new Date().toISOString().slice(0, 10))
     .maybeSingle();
 
   if (!offre || !offre.email_contact) {

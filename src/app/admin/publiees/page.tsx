@@ -1,23 +1,23 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import AdminOffresList, {
-  type OffreCommercantAdmin,
-} from "@/components/admin/AdminOffresList";
 import AdminNav from "@/components/admin/AdminNav";
+import OffresPublieesListe, {
+  type OffrePublieeAdmin,
+} from "@/components/admin/OffresPublieesListe";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+export default async function AdminPublieesPage() {
   const supabase = createAdminClient();
 
   const { data } = await supabase
     .from("offres_commercants")
     .select(
-      "id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, siret, created_at, image_url, image_source, pexels_photographe, villes ( nom )"
+      "id, nom_commerce, poste, date_expiration, created_at, villes ( nom )"
     )
-    .eq("statut", "en_attente")
-    .order("created_at", { ascending: true });
+    .eq("statut", "publiee")
+    .order("date_expiration", { ascending: true });
 
-  const offres: OffreCommercantAdmin[] = (data ?? []).map((o) => {
+  const offres: OffrePublieeAdmin[] = (data ?? []).map((o) => {
     const villeRelation = o.villes as unknown as
       | { nom: string }
       | { nom: string }[]
@@ -27,17 +27,7 @@ export default async function AdminPage() {
       id: o.id,
       nom_commerce: o.nom_commerce,
       poste: o.poste,
-      type_contrat: o.type_contrat,
-      temps_travail: o.temps_travail,
-      horaires: o.horaires,
-      quartier: o.quartier,
-      description: o.description,
-      comment_postuler: o.comment_postuler,
-      siret: o.siret,
-      created_at: o.created_at,
-      image_url: o.image_url,
-      image_source: o.image_source,
-      pexels_photographe: o.pexels_photographe,
+      date_expiration: o.date_expiration,
       ville_nom: ville?.nom ?? "",
     };
   });
@@ -47,11 +37,11 @@ export default async function AdminPage() {
       <div className="max-w-3xl mx-auto flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-title text-3xl font-bold">
-            À valider ({offres.length})
+            Offres publiées ({offres.length})
           </h1>
           <AdminNav />
         </div>
-        <AdminOffresList offres={offres} />
+        <OffresPublieesListe offres={offres} />
       </div>
     </div>
   );

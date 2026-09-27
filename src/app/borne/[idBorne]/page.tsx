@@ -41,6 +41,7 @@ export default async function BornePage({
         )
         .eq("ville_id", borne.ville_id)
         .eq("statut", "publiee")
+        .gte("date_expiration", new Date().toISOString().slice(0, 10))
         .order("created_at", { ascending: false }),
     ]);
 
