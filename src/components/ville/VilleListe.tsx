@@ -69,7 +69,7 @@ export default function VilleListe({
         placeholder="Rechercher un métier, une entreprise..."
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
-        className="w-full rounded-xl bg-surface-sombre border border-white/10 px-4 py-3 text-lg"
+        className="w-full rounded-xl bg-surface-sombre border border-white/10 px-4 py-3 text-lg outline-none focus:border-vert-clair focus:ring-2 focus:ring-vert-clair/30"
       />
 
       <div className="flex flex-wrap gap-2">
@@ -78,10 +78,10 @@ export default function VilleListe({
             key={f.valeur}
             onClick={() => setFiltre(f.valeur)}
             className={
-              "px-4 py-2 rounded-full font-bold text-sm " +
+              "px-4 py-2 rounded-full font-bold text-sm border " +
               (filtre === f.valeur
-                ? "bg-jaune text-texte"
-                : "bg-surface-sombre text-texte-sombre border border-white/10")
+                ? "bg-jaune text-texte border-jaune shadow-md shadow-jaune/20"
+                : "bg-surface-sombre text-texte-sombre border-white/10 hover:border-vert-clair/50 hover:text-vert-clair")
             }
           >
             {f.libelle}
@@ -89,31 +89,46 @@ export default function VilleListe({
         ))}
       </div>
 
-      <p className="opacity-70">
+      <p className="opacity-70 text-sm uppercase tracking-wide">
         {offresFiltrees.length} offre{offresFiltrees.length > 1 ? "s" : ""}
       </p>
 
       <ul className="flex flex-col gap-4">
         {offresFiltrees.map((offre) => {
           const { titre, sousTitre, lieu, contrat, tempsTravail } = champs(offre);
+          const estCommercant = offre.source === "commercant";
           return (
             <li key={`${offre.source}-${offre.id}`}>
               <Link
                 href={`/ville/${villeSlug}/offres/${offre.id}`}
-                className="block bg-surface-sombre rounded-xl p-5 hover:bg-surface-sombre/70 border border-white/10"
+                className={
+                  "group block bg-surface-sombre rounded-xl p-5 border-l-4 border border-white/10 hover:-translate-y-0.5 hover:shadow-lg hover:border-white/20 " +
+                  (estCommercant ? "border-l-jaune" : "border-l-vert-clair")
+                }
               >
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-xl font-bold">{titre}</h2>
-                  {offre.source === "commercant" && (
+                  <h2 className="text-xl font-bold group-hover:text-vert-clair">
+                    {titre}
+                  </h2>
+                  {estCommercant && (
                     <span className="bg-jaune text-texte text-xs font-bold px-3 py-1 rounded-full shrink-0">
                       Commerçant du coin
                     </span>
                   )}
                 </div>
                 {sousTitre && <p className="opacity-80">{sousTitre}</p>}
-                <p className="opacity-60 text-sm mt-1">
-                  {[contrat, tempsTravail, lieu].filter(Boolean).join(" · ")}
-                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {contrat && (
+                    <span className="text-xs font-bold bg-white/5 px-2 py-1 rounded-full opacity-80">
+                      {contrat}
+                    </span>
+                  )}
+                  {[tempsTravail, lieu].filter(Boolean).map((v) => (
+                    <span key={v} className="text-xs px-2 py-1 rounded-full opacity-60">
+                      {v}
+                    </span>
+                  ))}
+                </div>
               </Link>
             </li>
           );

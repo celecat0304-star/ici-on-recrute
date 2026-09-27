@@ -242,14 +242,18 @@ export default function BorneClient({
 
     return (
       <div
-        className="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-6 py-8 cursor-pointer bg-fond text-texte"
+        className="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-6 py-8 cursor-pointer text-texte"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 0%, rgba(30,90,64,0.08), var(--color-fond) 60%)",
+        }}
         onClick={commencerNavigation}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && commencerNavigation()}
       >
         <h1 className="font-title text-6xl font-bold text-vert">On recrute.</h1>
-        <p className="text-2xl">à {villeNom}</p>
+        <p className="text-2xl border-b-4 border-jaune pb-1">à {villeNom}</p>
 
         {(offreA || offreB) && (
           <div className="flex flex-col md:flex-row gap-6 w-full max-w-4xl mt-4">
@@ -268,7 +272,9 @@ export default function BorneClient({
             offres de commerçants du coin
           </p>
         </div>
-        <p className="text-lg mt-4 opacity-70">Touchez l&apos;écran pour tout voir</p>
+        <p className="text-lg mt-4 opacity-70 animate-pulse">
+          Touchez l&apos;écran pour tout voir
+        </p>
       </div>
     );
   }
@@ -376,7 +382,7 @@ export default function BorneClient({
             "w-full max-w-3xl p-10 flex flex-col gap-4 relative " +
             (estCommercant
               ? "bg-[#FFFDF3] rounded-lg shadow-xl border border-dashed border-vert/30 -rotate-1"
-              : "bg-white rounded-3xl shadow-lg")
+              : "bg-white rounded-3xl shadow-xl shadow-black/5 border border-black/5")
           }
         >
           {estCommercant && (
@@ -519,7 +525,7 @@ function CarteAnnonce({
 }) {
   const infos = champsAffichage(offre);
   return (
-    <div className="flex-1 bg-white rounded-2xl shadow-lg p-6 text-left flex flex-col gap-2">
+    <div className="flex-1 bg-white rounded-2xl shadow-xl shadow-black/5 border border-black/5 p-6 text-left flex flex-col gap-2">
       <span className="self-start bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
         {etiquette}
       </span>

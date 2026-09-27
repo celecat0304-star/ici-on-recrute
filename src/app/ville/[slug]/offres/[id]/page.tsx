@@ -102,7 +102,10 @@ export default async function OffreDetailPage({
     <div className="min-h-screen bg-fond-sombre text-texte-sombre flex flex-col">
       <header className="px-6 py-6 border-b border-white/10">
         <div className="max-w-2xl mx-auto">
-          <Link href={`/ville/${slug}`} className="opacity-70 hover:opacity-100">
+          <Link
+            href={`/ville/${slug}`}
+            className="opacity-70 hover:opacity-100 hover:text-vert-clair inline-flex items-center gap-1"
+          >
             ← Retour aux offres de {ville.nom}
           </Link>
         </div>
@@ -137,24 +140,26 @@ export default async function OffreDetailPage({
         )}
 
         {offre.type_contrat && (
-          <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full">
+          <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full shadow-md shadow-jaune/10">
             {offre.type_contrat}
           </span>
         )}
-        <h1 className="font-title text-3xl font-bold">{titre}</h1>
+        <h1 className="font-title text-3xl font-bold leading-tight">{titre}</h1>
         {sousTitre && <p className="text-xl opacity-80">{sousTitre}</p>}
         <p className="opacity-60">
           {[lieu, tempsTravail].filter(Boolean).join(" · ")}
         </p>
 
         {offre.description && (
-          <p className="whitespace-pre-line mt-2">{offre.description}</p>
+          <p className="whitespace-pre-line mt-2 leading-relaxed opacity-90">
+            {offre.description}
+          </p>
         )}
 
         {source === "commercant" ? (
           <>
-            <div className="bg-surface-sombre rounded-xl p-5 mt-4">
-              <p className="font-bold mb-1">Comment postuler ?</p>
+            <div className="bg-surface-sombre border border-white/10 rounded-xl p-5 mt-4">
+              <p className="font-bold mb-1 text-vert-clair">Comment postuler ?</p>
               <p>{offre.comment_postuler}</p>
             </div>
             {offre.email_contact && <CandidatureForm offreId={offre.id} />}
@@ -164,7 +169,7 @@ export default async function OffreDetailPage({
             href={offre.url_origine}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 inline-block bg-vert text-white font-bold rounded-xl px-6 py-4 text-center hover:opacity-90"
+            className="mt-4 inline-block bg-vert text-white font-bold rounded-xl px-6 py-4 text-center shadow-lg shadow-vert/10 hover:shadow-xl hover:shadow-vert/20 hover:-translate-y-0.5"
           >
             Postuler sur France Travail
           </a>
