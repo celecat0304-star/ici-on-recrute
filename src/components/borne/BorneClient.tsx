@@ -44,6 +44,7 @@ function champsAffichage(offre: OffreAffichee) {
       description: offre.description,
       sourceLabel: "Commerçant du coin",
       imageUrl: offre.image_url,
+      estLogo: false,
       creditPexels:
         offre.image_source === "pexels" ? offre.pexels_photographe : null,
       grandeEntreprise: offre.categorie === "entreprise",
@@ -57,7 +58,8 @@ function champsAffichage(offre: OffreAffichee) {
     tempsTravail: offre.duree_travail,
     description: offre.description,
     sourceLabel: "France Travail",
-    imageUrl: null as string | null,
+    imageUrl: offre.entreprise_logo_url,
+    estLogo: true,
     creditPexels: null as string | null,
     grandeEntreprise: false,
   };
@@ -385,12 +387,22 @@ export default function BorneClient({
           )}
 
           {infos.imageUrl && (
-            <div>
+            <div
+              className={
+                infos.estLogo
+                  ? "w-full max-h-40 flex items-center justify-center bg-white rounded-xl p-4"
+                  : ""
+              }
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={infos.imageUrl}
                 alt=""
-                className="w-full max-h-64 object-cover rounded-xl"
+                className={
+                  infos.estLogo
+                    ? "max-h-32 max-w-full object-contain"
+                    : "w-full max-h-64 object-cover rounded-xl"
+                }
               />
               {infos.creditPexels && (
                 <p className="text-sm opacity-60 mt-1">
@@ -512,12 +524,24 @@ function CarteAnnonce({
         {etiquette}
       </span>
       {infos.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={infos.imageUrl}
-          alt=""
-          className="w-full h-32 object-cover rounded-lg"
-        />
+        <div
+          className={
+            infos.estLogo
+              ? "w-full h-32 flex items-center justify-center bg-white rounded-lg"
+              : ""
+          }
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={infos.imageUrl}
+            alt=""
+            className={
+              infos.estLogo
+                ? "max-h-24 max-w-[80%] object-contain"
+                : "w-full h-32 object-cover rounded-lg"
+            }
+          />
+        </div>
       )}
       <h3 className="font-title text-2xl font-bold">{infos.titre}</h3>
       {infos.sousTitre && <p className="opacity-70">{infos.sousTitre}</p>}

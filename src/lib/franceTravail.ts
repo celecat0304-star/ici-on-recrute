@@ -10,7 +10,7 @@ type OffreApi = {
   intitule: string;
   description?: string;
   dateCreation?: string;
-  entreprise?: { nom?: string };
+  entreprise?: { nom?: string; logo?: string };
   typeContrat?: string;
   typeContratLibelle?: string;
   dureeTravailLibelle?: string;
@@ -109,6 +109,7 @@ export async function synchroniserOffresVille(
     intitule: o.intitule,
     description: o.description ?? null,
     entreprise_nom: o.entreprise?.nom ?? null,
+    entreprise_logo_url: o.entreprise?.logo ?? null,
     type_contrat: o.typeContratLibelle ?? o.typeContrat ?? null,
     duree_travail: o.dureeTravailLibelleConverti ?? o.dureeTravailLibelle ?? null,
     lieu_travail: o.lieuTravail?.libelle ?? null,

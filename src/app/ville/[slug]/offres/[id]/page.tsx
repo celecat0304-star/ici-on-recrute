@@ -27,7 +27,7 @@ async function chargerOffre(villeId: string, id: string) {
   const { data: offreFranceTravail } = await supabase
     .from("offres_france_travail")
     .select(
-      "id, ville_id, intitule, description, entreprise_nom, type_contrat, duree_travail, lieu_travail, url_origine, date_publication"
+      "id, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication"
     )
     .eq("id", id)
     .eq("ville_id", villeId)
@@ -122,6 +122,17 @@ export default async function OffreDetailPage({
                 Photo : {offre.pexels_photographe} / Pexels
               </p>
             )}
+          </div>
+        )}
+
+        {source === "france_travail" && offre.entreprise_logo_url && (
+          <div className="w-full max-h-40 flex items-center justify-center bg-white rounded-xl p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={offre.entreprise_logo_url}
+              alt=""
+              className="max-h-32 max-w-full object-contain"
+            />
           </div>
         )}
 

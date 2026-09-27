@@ -5,6 +5,7 @@ export type OffreFranceTravail = {
   intitule: string;
   description: string | null;
   entreprise_nom: string | null;
+  entreprise_logo_url: string | null;
   type_contrat: string | null;
   duree_travail: string | null;
   lieu_travail: string | null;
