@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
+import CandidatureForm from "@/components/ville/CandidatureForm";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ async function chargerOffre(villeId: string, id: string) {
   const { data: offreCommercant } = await supabase
     .from("offres_commercants")
     .select(
-      "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, image_url, image_source, pexels_photographe"
+      "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, email_contact, image_url, image_source, pexels_photographe"
     )
     .eq("id", id)
     .eq("ville_id", villeId)
@@ -139,10 +140,13 @@ export default async function OffreDetailPage({
         )}
 
         {source === "commercant" ? (
-          <div className="bg-surface-sombre rounded-xl p-5 mt-4">
-            <p className="font-bold mb-1">Comment postuler ?</p>
-            <p>{offre.comment_postuler}</p>
-          </div>
+          <>
+            <div className="bg-surface-sombre rounded-xl p-5 mt-4">
+              <p className="font-bold mb-1">Comment postuler ?</p>
+              <p>{offre.comment_postuler}</p>
+            </div>
+            {offre.email_contact && <CandidatureForm offreId={offre.id} />}
+          </>
         ) : (
           <a
             href={offre.url_origine}

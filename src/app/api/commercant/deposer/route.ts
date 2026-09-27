@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     quartier,
     description,
     commentPostuler,
+    emailContact,
     siret,
     siteWeb, // champ piège (honeypot)
     captchaA,
@@ -42,11 +43,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!nomCommerce || !villeId || !poste || !typeContrat || !commentPostuler) {
+  if (
+    !nomCommerce ||
+    !villeId ||
+    !poste ||
+    !typeContrat ||
+    !commentPostuler ||
+    !emailContact
+  ) {
     return NextResponse.json(
       { error: "Merci de remplir tous les champs obligatoires." },
       { status: 400 }
     );
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailContact)) {
+    return NextResponse.json({ error: "E-mail invalide." }, { status: 400 });
   }
 
   if (!CONTRATS_VALIDES.includes(typeContrat)) {
@@ -126,6 +138,7 @@ export async function POST(request: NextRequest) {
     quartier: quartier || null,
     description: description || null,
     comment_postuler: commentPostuler,
+    email_contact: emailContact,
     siret: siretNettoye || null,
     statut: "en_attente",
     image_url:

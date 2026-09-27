@@ -47,6 +47,7 @@ export default function CommercantForm({
       quartier: donnees.get("quartier"),
       description: donnees.get("description"),
       commentPostuler: donnees.get("commentPostuler"),
+      emailContact: donnees.get("emailContact"),
       siret: donnees.get("siret"),
       siteWeb: donnees.get("siteWeb"),
       captchaA: captcha.a,
@@ -162,6 +163,16 @@ export default function CommercantForm({
           name="commentPostuler"
           required
           placeholder="Ex : venir déposer un CV sur place, téléphoner au..."
+          className="input"
+        />
+      </Champ>
+
+      <Champ label="E-mail pour recevoir les candidatures en ligne" required>
+        <input
+          name="emailContact"
+          type="email"
+          required
+          placeholder="vous@votre-commerce.fr"
           className="input"
         />
       </Champ>
