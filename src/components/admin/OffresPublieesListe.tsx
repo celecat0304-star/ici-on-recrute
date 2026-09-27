@@ -9,6 +9,8 @@ export type OffrePublieeAdmin = {
   poste: string;
   date_expiration: string | null;
   ville_nom: string;
+  categorie: "commercant" | "entreprise";
+  abonnement_actif: boolean;
 };
 
 export default function OffresPublieesListe({
@@ -19,7 +21,10 @@ export default function OffresPublieesListe({
   const router = useRouter();
   const [enCours, setEnCours] = useState<string | null>(null);
 
-  const agir = async (id: string, action: "retirer" | "renouveler") => {
+  const agir = async (
+    id: string,
+    action: "retirer" | "renouveler" | "activer_abonnement" | "desactiver_abonnement"
+  ) => {
     setEnCours(id);
     const res = await fetch(`/api/admin/offres/${id}`, {
       method: "PATCH",
@@ -45,6 +50,11 @@ export default function OffresPublieesListe({
           <div>
             <p className="font-bold">
               {offre.poste} — {offre.nom_commerce}
+              {offre.categorie === "entreprise" && (
+                <span className="ml-2 bg-vert text-white text-xs font-bold px-2 py-1 rounded-full align-middle">
+                  Grande entreprise
+                </span>
+              )}
             </p>
             <p className="text-sm opacity-60">
               {offre.ville_nom} · expire le{" "}
@@ -53,7 +63,26 @@ export default function OffresPublieesListe({
                 : "—"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {offre.categorie === "entreprise" && (
+              <button
+                onClick={() =>
+                  agir(
+                    offre.id,
+                    offre.abonnement_actif ? "desactiver_abonnement" : "activer_abonnement"
+                  )
+                }
+                disabled={enCours === offre.id}
+                className={
+                  "min-h-[40px] px-4 rounded-lg font-bold text-sm " +
+                  (offre.abonnement_actif
+                    ? "bg-jaune text-texte"
+                    : "border-2 border-jaune text-texte")
+                }
+              >
+                {offre.abonnement_actif ? "Abonnement actif ✓" : "Activer l'abonnement"}
+              </button>
+            )}
             <button
               onClick={() => agir(offre.id, "renouveler")}
               disabled={enCours === offre.id}

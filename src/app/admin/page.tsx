@@ -12,7 +12,7 @@ export default async function AdminPage() {
   const { data } = await supabase
     .from("offres_commercants")
     .select(
-      "id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, siret, created_at, image_url, image_source, pexels_photographe, villes ( nom )"
+      "id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, siret, created_at, image_url, image_source, pexels_photographe, categorie, villes ( nom )"
     )
     .eq("statut", "en_attente")
     .order("created_at", { ascending: true });
@@ -38,6 +38,7 @@ export default async function AdminPage() {
       image_url: o.image_url,
       image_source: o.image_source,
       pexels_photographe: o.pexels_photographe,
+      categorie: o.categorie,
       ville_nom: ville?.nom ?? "",
     };
   });

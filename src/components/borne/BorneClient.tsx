@@ -8,6 +8,8 @@ import type { OffreAffichee } from "@/lib/types";
 const DELAI_INACTIVITE_MS = 60_000;
 const SEUIL_GLISSEMENT_PX = 50;
 const DELAI_ENVOI_STATS_MS = 10_000;
+const DELAI_ROTATION_ATTENTE_MS = 12_000;
+const MAX_SELECTION = 10;
 
 type Props = {
   borne: { id: string; nom: string; lieu: string };
@@ -15,17 +17,21 @@ type Props = {
   villeNom: string;
   villeSlug: string;
   offres: OffreAffichee[];
+  caseA: OffreAffichee[];
+  caseB: OffreAffichee[];
   offresCommercantsCount?: number;
 };
 
 type EvenementStat = {
-  type: "vue" | "interet" | "qr_affiche";
+  type: "vue" | "interet" | "qr_affiche" | "selection";
   origine: "borne";
   ville_id: string;
   borne_id: string;
   offre_type: "france_travail" | "commercant";
   offre_id: string;
 };
+
+type ElementSelection = { source: "commercant" | "france_travail"; id: string };
 
 function champsAffichage(offre: OffreAffichee) {
   if (offre.source === "commercant") {
@@ -40,6 +46,7 @@ function champsAffichage(offre: OffreAffichee) {
       imageUrl: offre.image_url,
       creditPexels:
         offre.image_source === "pexels" ? offre.pexels_photographe : null,
+      grandeEntreprise: offre.categorie === "entreprise",
     };
   }
   return {
@@ -52,6 +59,7 @@ function champsAffichage(offre: OffreAffichee) {
     sourceLabel: "France Travail",
     imageUrl: null as string | null,
     creditPexels: null as string | null,
+    grandeEntreprise: false,
   };
 }
 
@@ -61,12 +69,24 @@ export default function BorneClient({
   villeNom,
   villeSlug,
   offres,
+  caseA,
+  caseB,
   offresCommercantsCount = 0,
 }: Props) {
   const [mode, setMode] = useState<"attente" | "navigation">("attente");
+  const [indexAttente, setIndexAttente] = useState(0);
   const [index, setIndex] = useState(0);
   const [detailOuvert, setDetailOuvert] = useState(false);
-  const [qrOuvert, setQrOuvert] = useState(false);
+  const [selection, setSelection] = useState<ElementSelection[]>([]);
+  const [messageLimite, setMessageLimite] = useState(false);
+  const [emailFormOuvert, setEmailFormOuvert] = useState(false);
+  const [envoiPanierEnCours, setEnvoiPanierEnCours] = useState(false);
+  const [erreurPanier, setErreurPanier] = useState("");
+  const [panierConfirmation, setPanierConfirmation] = useState<{
+    email: string;
+    lien: string;
+  } | null>(null);
+
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const evenementsEnAttente = useRef<EvenementStat[]>([]);
@@ -77,15 +97,21 @@ export default function BorneClient({
   const estCommercant = offre?.source === "commercant";
   const offresFranceTravailCount = offres.length - offresCommercantsCount;
 
-  const enregistrerEvenement = (type: EvenementStat["type"]) => {
-    if (!offre) return;
+  const estDansSelection = (o: OffreAffichee) =>
+    selection.some((s) => s.source === o.source && s.id === o.id);
+
+  const enregistrerEvenement = (
+    type: EvenementStat["type"],
+    cible: OffreAffichee | undefined = offre
+  ) => {
+    if (!cible) return;
     evenementsEnAttente.current.push({
       type,
       origine: "borne",
       ville_id: villeId,
       borne_id: borne.id,
-      offre_type: offre.source === "commercant" ? "commercant" : "france_travail",
-      offre_id: offre.id,
+      offre_type: cible.source === "commercant" ? "commercant" : "france_travail",
+      offre_id: cible.id,
     });
   };
 
@@ -112,21 +138,28 @@ export default function BorneClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offre?.id, mode]);
 
-  const lienOffre = useMemo(() => {
-    if (typeof window === "undefined" || !offre) return "";
-    return `${window.location.origin}/ville/${villeSlug}/offres/${offre.id}`;
-  }, [offre, villeSlug]);
+  // Rotation automatique du duo d'offres sur l'écran d'attente
+  useEffect(() => {
+    if (mode !== "attente") return;
+    const intervalle = setInterval(() => {
+      setIndexAttente((i) => i + 1);
+    }, DELAI_ROTATION_ATTENTE_MS);
+    return () => clearInterval(intervalle);
+  }, [mode]);
 
   const revenirAAttente = () => {
     setMode("attente");
     setIndex(0);
     setDetailOuvert(false);
-    setQrOuvert(false);
+    setSelection([]);
+    setEmailFormOuvert(false);
+    setPanierConfirmation(null);
+    setErreurPanier("");
   };
 
   const reinitialiserInactivite = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (mode === "navigation") {
+    if (mode === "navigation" && !emailFormOuvert && !panierConfirmation) {
       timerRef.current = setTimeout(revenirAAttente, DELAI_INACTIVITE_MS);
     }
   };
@@ -137,7 +170,7 @@ export default function BorneClient({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, index, detailOuvert, qrOuvert]);
+  }, [mode, index, detailOuvert, emailFormOuvert, panierConfirmation]);
 
   const commencerNavigation = () => {
     setMode("navigation");
@@ -146,14 +179,45 @@ export default function BorneClient({
 
   const suivante = () => {
     setDetailOuvert(false);
-    setQrOuvert(false);
     setIndex((i) => Math.min(i + 1, offres.length - 1));
   };
 
   const precedente = () => {
     setDetailOuvert(false);
-    setQrOuvert(false);
     setIndex((i) => Math.max(i - 1, 0));
+  };
+
+  const toggleSelection = () => {
+    if (!offre) return;
+    if (estDansSelection(offre)) {
+      setSelection((s) => s.filter((x) => !(x.source === offre.source && x.id === offre.id)));
+      return;
+    }
+    if (selection.length >= MAX_SELECTION) {
+      setMessageLimite(true);
+      setTimeout(() => setMessageLimite(false), 3000);
+      return;
+    }
+    setSelection((s) => [...s, { source: offre.source, id: offre.id }]);
+    enregistrerEvenement("selection");
+  };
+
+  const envoyerPanier = async (email: string) => {
+    setErreurPanier("");
+    setEnvoiPanierEnCours(true);
+    const res = await fetch("/api/panier/creer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ villeId, email, offres: selection }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setEnvoiPanierEnCours(false);
+    if (res.ok) {
+      setPanierConfirmation({ email, lien: data.lien });
+      setEmailFormOuvert(false);
+    } else {
+      setErreurPanier(data.error ?? "Une erreur est survenue.");
+    }
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -171,35 +235,38 @@ export default function BorneClient({
   };
 
   if (mode === "attente") {
+    const offreA = caseA.length > 0 ? caseA[indexAttente % caseA.length] : null;
+    const offreB = caseB.length > 0 ? caseB[indexAttente % caseB.length] : null;
+
     return (
       <div
-        className="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-8 cursor-pointer bg-fond text-texte"
+        className="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-6 py-8 cursor-pointer bg-fond text-texte"
         onClick={commencerNavigation}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && commencerNavigation()}
       >
-        <h1 className="font-title text-7xl font-bold text-vert">
-          On recrute.
-        </h1>
-        <p className="text-3xl">à {villeNom}</p>
-        <div className="flex gap-10 text-2xl mt-6">
+        <h1 className="font-title text-6xl font-bold text-vert">On recrute.</h1>
+        <p className="text-2xl">à {villeNom}</p>
+
+        {(offreA || offreB) && (
+          <div className="flex flex-col md:flex-row gap-6 w-full max-w-4xl mt-4">
+            {offreA && <CarteAnnonce offre={offreA} etiquette="Offre à la une" />}
+            {offreB && <CarteAnnonce offre={offreB} etiquette="Commerçant du coin" />}
+          </div>
+        )}
+
+        <div className="flex gap-10 text-xl mt-4">
           <p>
-            <span className="font-bold text-4xl block">
-              {offresFranceTravailCount}
-            </span>
+            <span className="font-bold text-3xl block">{offresFranceTravailCount}</span>
             offres aujourd&apos;hui
           </p>
           <p>
-            <span className="font-bold text-4xl block">
-              {offresCommercantsCount}
-            </span>
+            <span className="font-bold text-3xl block">{offresCommercantsCount}</span>
             offres de commerçants du coin
           </p>
         </div>
-        <p className="text-xl mt-10 opacity-70">
-          Touchez l&apos;écran pour commencer
-        </p>
+        <p className="text-lg mt-4 opacity-70">Touchez l&apos;écran pour tout voir</p>
       </div>
     );
   }
@@ -218,9 +285,72 @@ export default function BorneClient({
     );
   }
 
+  if (panierConfirmation) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
+        <h2 className="font-title text-3xl font-bold text-vert">C&apos;est envoyé !</h2>
+        <p className="text-xl max-w-md">
+          Un lien a été envoyé à {panierConfirmation.email}. Vous pouvez aussi
+          scanner ce code pour retrouver vos offres sur votre téléphone :
+        </p>
+        <QRCodeSVG value={panierConfirmation.lien} size={220} />
+        <button
+          onClick={revenirAAttente}
+          className="min-h-[72px] px-10 rounded-xl bg-vert text-white text-xl font-bold mt-4"
+        >
+          Terminé
+        </button>
+      </div>
+    );
+  }
+
+  if (emailFormOuvert) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
+        <h2 className="font-title text-3xl font-bold">Recevoir mes offres</h2>
+        <p className="text-lg max-w-md opacity-80">
+          {selection.length} offre(s) sélectionnée(s). Entrez votre e-mail pour
+          recevoir le lien (et le voir aussi en QR code ici).
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const email = new FormData(e.currentTarget).get("email") as string;
+            envoyerPanier(email);
+          }}
+          className="flex flex-col gap-4 w-full max-w-sm"
+        >
+          <input
+            name="email"
+            type="email"
+            required
+            autoFocus
+            placeholder="vous@exemple.fr"
+            className="min-h-[64px] text-xl text-center rounded-xl border-2 border-vert/40 px-4"
+          />
+          {erreurPanier && <p className="text-red-600">{erreurPanier}</p>}
+          <button
+            type="submit"
+            disabled={envoiPanierEnCours}
+            className="min-h-[64px] rounded-xl bg-vert text-white text-xl font-bold"
+          >
+            {envoiPanierEnCours ? "Envoi..." : "Envoyer"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmailFormOuvert(false)}
+            className="min-h-[56px] rounded-xl border-2 border-vert text-vert text-lg font-bold"
+          >
+            Annuler
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="min-h-screen w-full flex flex-col bg-fond text-texte"
+      className="min-h-screen w-full flex flex-col bg-fond text-texte pb-24"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onClick={reinitialiserInactivite}
@@ -270,21 +400,36 @@ export default function BorneClient({
             </div>
           )}
 
-          {infos.contrat && (
-            <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full text-lg">
-              {infos.contrat}
-            </span>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {infos.contrat && (
+              <span className="bg-jaune text-texte font-bold px-4 py-2 rounded-full text-lg">
+                {infos.contrat}
+              </span>
+            )}
+            {infos.grandeEntreprise && (
+              <span className="bg-vert text-white font-bold px-4 py-2 rounded-full text-lg">
+                Offre à la une
+              </span>
+            )}
+          </div>
           <h2 className="font-title text-4xl font-bold">{infos.titre}</h2>
           {infos.sousTitre && <p className="text-2xl">{infos.sousTitre}</p>}
           <p className="text-xl opacity-80">
             {[infos.lieu, infos.tempsTravail].filter(Boolean).join(" · ")}
           </p>
 
+          <button
+            onClick={() => {
+              if (!detailOuvert) enregistrerEvenement("interet");
+              setDetailOuvert(!detailOuvert);
+            }}
+            className="self-start underline text-lg"
+          >
+            {detailOuvert ? "Réduire" : "En savoir plus"}
+          </button>
+
           {detailOuvert && infos.description && (
-            <p className="text-xl mt-2 whitespace-pre-line">
-              {infos.description}
-            </p>
+            <p className="text-xl mt-2 whitespace-pre-line">{infos.description}</p>
           )}
 
           {detailOuvert && estCommercant && offre.source === "commercant" && (
@@ -293,38 +438,23 @@ export default function BorneClient({
             </p>
           )}
 
-          <p className="text-base opacity-60 mt-2">
-            Source : {infos.sourceLabel}
-          </p>
+          <p className="text-base opacity-60 mt-2">Source : {infos.sourceLabel}</p>
 
-          <div className="flex flex-wrap gap-4 mt-4">
-            <button
-              onClick={() => {
-                if (!detailOuvert) enregistrerEvenement("interet");
-                setDetailOuvert(!detailOuvert);
-              }}
-              className="min-h-[72px] px-8 rounded-xl bg-vert text-white text-xl font-bold flex-1"
-            >
-              {detailOuvert ? "Réduire" : "Ça m'intéresse"}
-            </button>
-            <button
-              onClick={() => {
-                if (!qrOuvert) enregistrerEvenement("qr_affiche");
-                setQrOuvert(!qrOuvert);
-              }}
-              className="min-h-[72px] px-8 rounded-xl bg-jaune text-texte text-xl font-bold flex-1"
-            >
-              Recevoir sur mon téléphone
-            </button>
-          </div>
-
-          {qrOuvert && lienOffre && (
-            <div className="flex flex-col items-center gap-3 mt-4">
-              <QRCodeSVG value={lienOffre} size={180} />
-              <p className="text-lg text-center">
-                Scannez pour retrouver cette offre sur votre téléphone
-              </p>
-            </div>
+          <button
+            onClick={toggleSelection}
+            className={
+              "min-h-[72px] px-8 rounded-xl text-xl font-bold mt-2 " +
+              (estDansSelection(offre)
+                ? "bg-vert text-white"
+                : "border-2 border-vert text-vert")
+            }
+          >
+            {estDansSelection(offre) ? "✓ Dans ma sélection" : "✚ Ajouter à ma sélection"}
+          </button>
+          {messageLimite && (
+            <p className="text-red-600 text-sm">
+              Vous avez déjà {MAX_SELECTION} offres sélectionnées.
+            </p>
           )}
         </div>
 
@@ -349,6 +479,49 @@ export default function BorneClient({
           Offre {index + 1} / {offres.length}
         </p>
       </main>
+
+      {selection.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-vert text-white px-6 py-4 flex items-center justify-between gap-4">
+          <p className="text-lg font-bold">
+            🧺 {selection.length} offre{selection.length > 1 ? "s" : ""} sélectionnée
+            {selection.length > 1 ? "s" : ""}
+          </p>
+          <button
+            onClick={() => setEmailFormOuvert(true)}
+            className="min-h-[56px] px-6 rounded-xl bg-jaune text-texte font-bold text-lg"
+          >
+            Recevoir par e-mail →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CarteAnnonce({
+  offre,
+  etiquette,
+}: {
+  offre: OffreAffichee;
+  etiquette: string;
+}) {
+  const infos = champsAffichage(offre);
+  return (
+    <div className="flex-1 bg-white rounded-2xl shadow-lg p-6 text-left flex flex-col gap-2">
+      <span className="self-start bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
+        {etiquette}
+      </span>
+      {infos.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={infos.imageUrl}
+          alt=""
+          className="w-full h-32 object-cover rounded-lg"
+        />
+      )}
+      <h3 className="font-title text-2xl font-bold">{infos.titre}</h3>
+      {infos.sousTitre && <p className="opacity-70">{infos.sousTitre}</p>}
+      {infos.contrat && <p className="text-sm opacity-60">{infos.contrat}</p>}
     </div>
   );
 }

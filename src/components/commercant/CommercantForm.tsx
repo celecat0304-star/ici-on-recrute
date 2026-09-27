@@ -7,9 +7,12 @@ const CONTRATS = ["CDI", "CDD", "Saisonnier", "Extra", "Apprentissage"];
 
 export default function CommercantForm({
   villes,
+  categorie = "commercant",
 }: {
   villes: { id: string; nom: string }[];
+  categorie?: "commercant" | "entreprise";
 }) {
+  const estEntreprise = categorie === "entreprise";
   const [envoye, setEnvoye] = useState(false);
   const [erreur, setErreur] = useState("");
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
@@ -49,6 +52,7 @@ export default function CommercantForm({
       commentPostuler: donnees.get("commentPostuler"),
       emailContact: donnees.get("emailContact"),
       siret: donnees.get("siret"),
+      categorie,
       siteWeb: donnees.get("siteWeb"),
       captchaA: captcha.a,
       captchaB: captcha.b,
@@ -79,8 +83,11 @@ export default function CommercantForm({
           Merci !
         </h2>
         <p className="text-lg">
-          Votre offre a bien été envoyée. Elle sera vérifiée puis publiée sous
-          peu sur les bornes et le site emploi de votre ville.
+          Votre offre a bien été envoyée. Elle sera vérifiée{" "}
+          {estEntreprise
+            ? "puis nous vous recontacterons pour activer sa mise en avant"
+            : "puis publiée sous peu"}{" "}
+          sur les bornes et le site emploi de votre ville.
         </p>
       </div>
     );
@@ -91,7 +98,7 @@ export default function CommercantForm({
       onSubmit={onSubmit}
       className="bg-white rounded-2xl shadow p-8 flex flex-col gap-4"
     >
-      <Champ label="Nom du commerce" required>
+      <Champ label={estEntreprise ? "Nom de l'entreprise" : "Nom du commerce"} required>
         <input name="nomCommerce" required className="input" />
       </Champ>
 

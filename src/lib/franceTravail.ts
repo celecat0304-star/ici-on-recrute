@@ -17,7 +17,27 @@ type OffreApi = {
   dureeTravailLibelleConverti?: string;
   lieuTravail?: { libelle?: string };
   origineOffre?: { urlOrigine?: string };
+  trancheEffectifEtab?: string;
 };
+
+// La tranche officielle la plus proche du seuil de 30 salariés est "20 à 49 salariés" :
+// on considère tout ce qui est en dessous (ou inconnu) comme une petite structure.
+const TRANCHES_GRANDES_ENTREPRISES = [
+  "50 à 99 salariés",
+  "100 à 199 salariés",
+  "200 à 249 salariés",
+  "250 à 499 salariés",
+  "500 à 999 salariés",
+  "1000 à 1999 salariés",
+  "2000 à 4999 salariés",
+  "5000 à 9999 salariés",
+  "10000 salariés et plus",
+];
+
+export function estGrandeEntreprise(trancheEffectif: string | null): boolean {
+  if (!trancheEffectif) return false;
+  return TRANCHES_GRANDES_ENTREPRISES.includes(trancheEffectif);
+}
 
 async function getAccessToken(): Promise<string> {
   const params = new URLSearchParams({
@@ -97,6 +117,7 @@ export async function synchroniserOffresVille(
       `https://candidat.francetravail.fr/offres/recherche/detail/${o.id}`,
     date_publication: o.dateCreation ?? null,
     date_maj: new Date().toISOString(),
+    tranche_effectif: o.trancheEffectifEtab ?? null,
   }));
 
   if (lignes.length > 0) {

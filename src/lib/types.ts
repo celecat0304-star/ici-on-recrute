@@ -11,6 +11,7 @@ export type OffreFranceTravail = {
   url_origine: string;
   date_publication: string | null;
   date_maj: string;
+  tranche_effectif: string | null;
 };
 
 export type OffreCommercantPublique = {
@@ -27,6 +28,8 @@ export type OffreCommercantPublique = {
   image_url: string | null;
   image_source: string | null;
   pexels_photographe: string | null;
+  categorie: "commercant" | "entreprise";
+  abonnement_actif: boolean;
 };
 
 export type OffreAffichee =

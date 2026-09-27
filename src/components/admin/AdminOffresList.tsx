@@ -19,6 +19,7 @@ export type OffreCommercantAdmin = {
   image_url: string | null;
   image_source: string | null;
   pexels_photographe: string | null;
+  categorie: "commercant" | "entreprise";
 };
 
 type Action = "publier" | "publier_sans_image" | "refuser";
@@ -65,7 +66,14 @@ export default function AdminOffresList({
             <h2 className="font-title text-xl font-bold">
               {offre.poste} — {offre.nom_commerce}
             </h2>
-            <span className="text-sm opacity-60">{offre.ville_nom}</span>
+            <div className="flex items-center gap-2">
+              {offre.categorie === "entreprise" && (
+                <span className="bg-vert text-white text-xs font-bold px-2 py-1 rounded-full">
+                  Grande entreprise
+                </span>
+              )}
+              <span className="text-sm opacity-60">{offre.ville_nom}</span>
+            </div>
           </div>
           <p className="text-sm opacity-70">
             {[offre.type_contrat, offre.temps_travail, offre.horaires, offre.quartier]

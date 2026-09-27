@@ -49,14 +49,14 @@ export default async function VillePage({
       supabase
         .from("offres_france_travail")
         .select(
-          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj"
+          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif"
         )
         .eq("ville_id", ville.id)
         .order("date_publication", { ascending: false }),
       supabase
         .from("offres_commercants")
         .select(
-          "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, image_url, image_source, pexels_photographe"
+          "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, image_url, image_source, pexels_photographe, categorie, abonnement_actif"
         )
         .eq("ville_id", ville.id)
         .eq("statut", "publiee")

@@ -12,7 +12,7 @@ export default async function AdminPublieesPage() {
   const { data } = await supabase
     .from("offres_commercants")
     .select(
-      "id, nom_commerce, poste, date_expiration, created_at, villes ( nom )"
+      "id, nom_commerce, poste, date_expiration, created_at, categorie, abonnement_actif, villes ( nom )"
     )
     .eq("statut", "publiee")
     .order("date_expiration", { ascending: true });
@@ -28,6 +28,8 @@ export default async function AdminPublieesPage() {
       nom_commerce: o.nom_commerce,
       poste: o.poste,
       date_expiration: o.date_expiration,
+      categorie: o.categorie,
+      abonnement_actif: o.abonnement_actif,
       ville_nom: ville?.nom ?? "",
     };
   });

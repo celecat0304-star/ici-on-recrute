@@ -14,6 +14,8 @@ export async function PATCH(
     "refuser",
     "retirer",
     "renouveler",
+    "activer_abonnement",
+    "desactiver_abonnement",
   ];
   if (!actionsValides.includes(action)) {
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
@@ -29,6 +31,15 @@ export async function PATCH(
           .toISOString()
           .slice(0, 10),
       })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "activer_abonnement" || action === "desactiver_abonnement") {
+    const { error } = await supabase
+      .from("offres_commercants")
+      .update({ abonnement_actif: action === "activer_abonnement" })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });

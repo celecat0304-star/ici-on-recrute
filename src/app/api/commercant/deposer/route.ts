@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     commentPostuler,
     emailContact,
     siret,
+    categorie,
     siteWeb, // champ piège (honeypot)
     captchaA,
     captchaB,
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest) {
     comment_postuler: commentPostuler,
     email_contact: emailContact,
     siret: siretNettoye || null,
+    categorie: categorie === "entreprise" ? "entreprise" : "commercant",
     statut: "en_attente",
     image_url:
       sourceImage === "pexels" ? pexelsUrl || null : sourceImage === "upload" ? imageUrl : null,
