@@ -68,8 +68,9 @@ export async function POST(request: NextRequest) {
         <p><a href="${lien}">${lien}</a></p>
       `,
     });
-  } catch {
+  } catch (err) {
     // On ne bloque pas si l'e-mail échoue : le QR code affiché sur la borne fonctionne quand même.
+    console.error("Échec envoi e-mail panier :", err);
   }
 
   return NextResponse.json({ ok: true, panierId: panier.id, lien });
