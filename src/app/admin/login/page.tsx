@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
@@ -13,18 +15,22 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setErreur("");
     setEnvoi(true);
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ motDePasse }),
+
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: motDePasse,
     });
+
     setEnvoi(false);
-    if (res.ok) {
-      router.push("/admin");
-      router.refresh();
-    } else {
-      setErreur("Mot de passe incorrect.");
+
+    if (error) {
+      setErreur("E-mail ou mot de passe incorrect.");
+      return;
     }
+
+    router.push("/admin");
+    router.refresh();
   };
 
   return (
@@ -35,6 +41,17 @@ export default function AdminLoginPage() {
       >
         <h1 className="font-title text-2xl font-bold">Administration</h1>
         <label className="flex flex-col gap-1">
+          <span>E-mail</span>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border-2 border-vert/30 rounded-lg px-3 py-2 min-h-[48px]"
+            autoFocus
+          />
+        </label>
+        <label className="flex flex-col gap-1">
           <span>Mot de passe</span>
           <input
             type="password"
@@ -42,7 +59,6 @@ export default function AdminLoginPage() {
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
             className="border-2 border-vert/30 rounded-lg px-3 py-2 min-h-[48px]"
-            autoFocus
           />
         </label>
         {erreur && <p className="text-red-600 text-sm">{erreur}</p>}

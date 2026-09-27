@@ -1,8 +1,11 @@
 "use client";
 
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+
 export default function AdminLogoutButton() {
   const deconnexion = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.signOut();
     window.location.href = "/admin/login";
   };
 
