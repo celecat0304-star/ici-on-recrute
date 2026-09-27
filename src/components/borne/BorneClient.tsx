@@ -2,17 +2,29 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { OffreAffichee } from "@/lib/types";
 
 const DELAI_INACTIVITE_MS = 60_000;
 const SEUIL_GLISSEMENT_PX = 50;
+const DELAI_ENVOI_STATS_MS = 10_000;
 
 type Props = {
   borne: { id: string; nom: string; lieu: string };
+  villeId: string;
   villeNom: string;
   villeSlug: string;
   offres: OffreAffichee[];
   offresCommercantsCount?: number;
+};
+
+type EvenementStat = {
+  type: "vue" | "interet" | "qr_affiche";
+  origine: "borne";
+  ville_id: string;
+  borne_id: string;
+  offre_type: "france_travail" | "commercant";
+  offre_id: string;
 };
 
 function champsAffichage(offre: OffreAffichee) {
@@ -45,6 +57,7 @@ function champsAffichage(offre: OffreAffichee) {
 
 export default function BorneClient({
   borne,
+  villeId,
   villeNom,
   villeSlug,
   offres,
@@ -56,11 +69,48 @@ export default function BorneClient({
   const [qrOuvert, setQrOuvert] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
+  const evenementsEnAttente = useRef<EvenementStat[]>([]);
+  const supabase = useMemo(() => createPublicClient(), []);
 
   const offre = offres[index];
   const infos = offre ? champsAffichage(offre) : null;
   const estCommercant = offre?.source === "commercant";
   const offresFranceTravailCount = offres.length - offresCommercantsCount;
+
+  const enregistrerEvenement = (type: EvenementStat["type"]) => {
+    if (!offre) return;
+    evenementsEnAttente.current.push({
+      type,
+      origine: "borne",
+      ville_id: villeId,
+      borne_id: borne.id,
+      offre_type: offre.source === "commercant" ? "commercant" : "france_travail",
+      offre_id: offre.id,
+    });
+  };
+
+  useEffect(() => {
+    const envoyer = () => {
+      if (evenementsEnAttente.current.length === 0) return;
+      const lot = evenementsEnAttente.current;
+      evenementsEnAttente.current = [];
+      supabase.from("evenements").insert(lot).then(({ error }) => {
+        if (error) evenementsEnAttente.current.push(...lot);
+      });
+    };
+    const intervalle = setInterval(envoyer, DELAI_ENVOI_STATS_MS);
+    return () => {
+      clearInterval(intervalle);
+      envoyer();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (mode === "navigation" && offre) {
+      enregistrerEvenement("vue");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offre?.id, mode]);
 
   const lienOffre = useMemo(() => {
     if (typeof window === "undefined" || !offre) return "";
@@ -249,13 +299,19 @@ export default function BorneClient({
 
           <div className="flex flex-wrap gap-4 mt-4">
             <button
-              onClick={() => setDetailOuvert((v) => !v)}
+              onClick={() => {
+                if (!detailOuvert) enregistrerEvenement("interet");
+                setDetailOuvert(!detailOuvert);
+              }}
               className="min-h-[72px] px-8 rounded-xl bg-vert text-white text-xl font-bold flex-1"
             >
               {detailOuvert ? "Réduire" : "Ça m'intéresse"}
             </button>
             <button
-              onClick={() => setQrOuvert((v) => !v)}
+              onClick={() => {
+                if (!qrOuvert) enregistrerEvenement("qr_affiche");
+                setQrOuvert(!qrOuvert);
+              }}
               className="min-h-[72px] px-8 rounded-xl bg-jaune text-texte text-xl font-bold flex-1"
             >
               Recevoir sur mon téléphone

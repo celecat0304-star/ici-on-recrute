@@ -56,6 +56,7 @@ export default async function BornePage({
   return (
     <BorneClient
       borne={{ id: borne.id, nom: borne.nom, lieu: borne.lieu }}
+      villeId={borne.ville_id}
       villeNom={ville?.nom ?? ""}
       villeSlug={ville?.slug ?? ""}
       offres={offres}

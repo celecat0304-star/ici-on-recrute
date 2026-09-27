@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AdminOffresList, {
   type OffreCommercantAdmin,
@@ -49,7 +50,12 @@ export default async function AdminPage() {
           <h1 className="font-title text-3xl font-bold">
             À valider ({offres.length})
           </h1>
-          <AdminLogoutButton />
+          <div className="flex items-center gap-4">
+            <Link href="/admin/statistiques" className="underline">
+              Statistiques
+            </Link>
+            <AdminLogoutButton />
+          </div>
         </div>
         <AdminOffresList offres={offres} />
       </div>
