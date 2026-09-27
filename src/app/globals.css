@@ -12,6 +12,10 @@
   --color-jaune: #f3c63a;
   --color-fond: #edf1ec;
   --color-texte: #18201c;
+  --color-fond-sombre: #101b15;
+  --color-surface-sombre: #182720;
+  --color-texte-sombre: #edf1ec;
+  --color-vert-clair: #5bb98c;
   --font-title: var(--font-bricolage);
   --font-body: var(--font-atkinson);
 }
