@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { OffreFranceTravail } from "@/lib/types";
+import type { OffreAffichee } from "@/lib/types";
 
 const DELAI_INACTIVITE_MS = 60_000;
 const SEUIL_GLISSEMENT_PX = 50;
@@ -11,9 +11,32 @@ type Props = {
   borne: { id: string; nom: string; lieu: string };
   villeNom: string;
   villeSlug: string;
-  offres: OffreFranceTravail[];
+  offres: OffreAffichee[];
   offresCommercantsCount?: number;
 };
+
+function champsAffichage(offre: OffreAffichee) {
+  if (offre.source === "commercant") {
+    return {
+      titre: offre.poste,
+      sousTitre: offre.nom_commerce,
+      lieu: offre.quartier,
+      contrat: offre.type_contrat,
+      tempsTravail: offre.temps_travail,
+      description: offre.description,
+      sourceLabel: "Commerçant du coin",
+    };
+  }
+  return {
+    titre: offre.intitule,
+    sousTitre: offre.entreprise_nom,
+    lieu: offre.lieu_travail,
+    contrat: offre.type_contrat,
+    tempsTravail: offre.duree_travail,
+    description: offre.description,
+    sourceLabel: "France Travail",
+  };
+}
 
 export default function BorneClient({
   borne,
@@ -30,6 +53,9 @@ export default function BorneClient({
   const touchStartX = useRef<number | null>(null);
 
   const offre = offres[index];
+  const infos = offre ? champsAffichage(offre) : null;
+  const estCommercant = offre?.source === "commercant";
+  const offresFranceTravailCount = offres.length - offresCommercantsCount;
 
   const lienOffre = useMemo(() => {
     if (typeof window === "undefined" || !offre) return "";
@@ -104,7 +130,9 @@ export default function BorneClient({
         <p className="text-3xl">à {villeNom}</p>
         <div className="flex gap-10 text-2xl mt-6">
           <p>
-            <span className="font-bold text-4xl block">{offres.length}</span>
+            <span className="font-bold text-4xl block">
+              {offresFranceTravailCount}
+            </span>
             offres aujourd&apos;hui
           </p>
           <p>
@@ -121,7 +149,7 @@ export default function BorneClient({
     );
   }
 
-  if (!offre) {
+  if (!offre || !infos) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
         <p className="text-2xl">Aucune offre disponible pour le moment.</p>
@@ -156,27 +184,47 @@ export default function BorneClient({
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-6">
-        <div className="w-full max-w-3xl bg-white rounded-3xl shadow-lg p-10 flex flex-col gap-4">
-          {offre.type_contrat && (
+        <div
+          className={
+            "w-full max-w-3xl p-10 flex flex-col gap-4 relative " +
+            (estCommercant
+              ? "bg-[#FFFDF3] rounded-lg shadow-xl border border-dashed border-vert/30 -rotate-1"
+              : "bg-white rounded-3xl shadow-lg")
+          }
+        >
+          {estCommercant && (
+            <span
+              className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-7 bg-jaune/90 rotate-2 shadow-sm"
+              aria-hidden="true"
+            />
+          )}
+
+          {infos.contrat && (
             <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full text-lg">
-              {offre.type_contrat}
+              {infos.contrat}
             </span>
           )}
-          <h2 className="font-title text-4xl font-bold">{offre.intitule}</h2>
-          {offre.entreprise_nom && (
-            <p className="text-2xl">{offre.entreprise_nom}</p>
-          )}
+          <h2 className="font-title text-4xl font-bold">{infos.titre}</h2>
+          {infos.sousTitre && <p className="text-2xl">{infos.sousTitre}</p>}
           <p className="text-xl opacity-80">
-            {[offre.lieu_travail, offre.duree_travail].filter(Boolean).join(" · ")}
+            {[infos.lieu, infos.tempsTravail].filter(Boolean).join(" · ")}
           </p>
 
-          {detailOuvert && offre.description && (
+          {detailOuvert && infos.description && (
             <p className="text-xl mt-2 whitespace-pre-line">
-              {offre.description}
+              {infos.description}
             </p>
           )}
 
-          <p className="text-base opacity-60 mt-2">Source : France Travail</p>
+          {detailOuvert && estCommercant && offre.source === "commercant" && (
+            <p className="text-lg mt-1">
+              <strong>Comment postuler :</strong> {offre.comment_postuler}
+            </p>
+          )}
+
+          <p className="text-base opacity-60 mt-2">
+            Source : {infos.sourceLabel}
+          </p>
 
           <div className="flex flex-wrap gap-4 mt-4">
             <button

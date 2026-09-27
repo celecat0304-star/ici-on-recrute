@@ -12,3 +12,21 @@ export type OffreFranceTravail = {
   date_publication: string | null;
   date_maj: string;
 };
+
+export type OffreCommercantPublique = {
+  id: string;
+  ville_id: string;
+  nom_commerce: string;
+  poste: string;
+  type_contrat: string;
+  temps_travail: string | null;
+  horaires: string | null;
+  quartier: string | null;
+  description: string | null;
+  comment_postuler: string;
+  image_url: string | null;
+};
+
+export type OffreAffichee =
+  | ({ source: "commercant" } & OffreCommercantPublique)
+  | ({ source: "france_travail" } & OffreFranceTravail);
