@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 const TOKEN_URL =
   "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=%2Fpartenaire";
 const SEARCH_URL =
@@ -66,4 +68,43 @@ export async function fetchOffresPourVille(
 
   const data = (await res.json()) as { resultats?: OffreApi[] };
   return data.resultats ?? [];
+}
+
+export async function synchroniserOffresVille(
+  supabase: SupabaseClient,
+  ville: { id: string; code_insee: string | null; rayon_recherche_km: number | null }
+): Promise<number> {
+  if (!ville.code_insee) {
+    throw new Error("Cette ville n'a pas de code INSEE renseigné.");
+  }
+
+  const offres = await fetchOffresPourVille(
+    ville.code_insee,
+    ville.rayon_recherche_km ?? 10
+  );
+
+  const lignes = offres.map((o) => ({
+    id_france_travail: o.id,
+    ville_id: ville.id,
+    intitule: o.intitule,
+    description: o.description ?? null,
+    entreprise_nom: o.entreprise?.nom ?? null,
+    type_contrat: o.typeContratLibelle ?? o.typeContrat ?? null,
+    duree_travail: o.dureeTravailLibelleConverti ?? o.dureeTravailLibelle ?? null,
+    lieu_travail: o.lieuTravail?.libelle ?? null,
+    url_origine:
+      o.origineOffre?.urlOrigine ??
+      `https://candidat.francetravail.fr/offres/recherche/detail/${o.id}`,
+    date_publication: o.dateCreation ?? null,
+    date_maj: new Date().toISOString(),
+  }));
+
+  if (lignes.length > 0) {
+    const { error } = await supabase
+      .from("offres_france_travail")
+      .upsert(lignes, { onConflict: "id_france_travail" });
+    if (error) throw new Error(error.message);
+  }
+
+  return lignes.length;
 }

@@ -109,6 +109,25 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
     motDePasse: string;
   } | null>(null);
   const [erreur, setErreur] = useState("");
+  const [syncEnCours, setSyncEnCours] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
+  const synchroniser = async () => {
+    setErreur("");
+    setSyncMessage("");
+    setSyncEnCours(true);
+    const res = await fetch(`/api/admin/villes/${ville.id}/synchroniser`, {
+      method: "POST",
+    });
+    const data = await res.json().catch(() => ({}));
+    setSyncEnCours(false);
+    if (res.ok) {
+      setSyncMessage(`${data.nombre} offre(s) récupérée(s).`);
+      router.refresh();
+    } else {
+      setErreur(data.error ?? "Erreur");
+    }
+  };
 
   const ajouterBorne = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -173,6 +192,19 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
         {" · rayon "}
         {ville.rayon_recherche_km} km
       </p>
+
+      {ville.code_insee && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={synchroniser}
+            disabled={syncEnCours}
+            className="min-h-[40px] px-4 rounded-lg border-2 border-vert text-vert font-bold text-sm self-start"
+          >
+            {syncEnCours ? "Récupération..." : "Récupérer les offres France Travail maintenant"}
+          </button>
+          {syncMessage && <span className="text-sm opacity-70">{syncMessage}</span>}
+        </div>
+      )}
 
       <div>
         <p className="font-bold mb-1">Bornes ({ville.bornes.length})</p>
