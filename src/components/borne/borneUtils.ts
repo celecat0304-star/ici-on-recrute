@@ -78,6 +78,31 @@ export function joursDepuis(date: string | null) {
   return Math.max(0, Math.floor((Date.now() - d) / 86_400_000));
 }
 
+const RE_HF = /(?<![\p{L}\d])\(?\s*(?:h\s*\/\s*f|f\s*\/\s*h)\s*\)?(?![\p{L}\d])/giu;
+
+// Casse normale (jamais tout en majuscules) et un seul « (H/F) » par titre.
+export function nettoyerTitre(titre: string) {
+  let t = titre.trim();
+  const avaitHF = new RegExp(RE_HF.source, "iu").test(t);
+  t = t.replace(RE_HF, " ").replace(/\s{2,}/g, " ").replace(/[\s\-–—:/,]+$/, "").trim();
+  const lettres = t.replace(/[^\p{L}]/gu, "");
+  if (lettres.length > 3 && lettres === lettres.toUpperCase()) {
+    t = t.toLowerCase();
+    t = t.charAt(0).toUpperCase() + t.slice(1);
+    t = t.replace(/(\s[-–/:]\s)(\p{L})/gu, (_, sep: string, l: string) => sep + l.toUpperCase());
+  }
+  return avaitHF ? `${t} (H/F)` : t;
+}
+
+// Coupe sur un mot entier, jamais au milieu d'un mot.
+export function tronquer(texte: string, max: number) {
+  if (texte.length <= max) return texte;
+  const coupe = texte.slice(0, max);
+  const i = coupe.lastIndexOf(" ");
+  const base = (i > max * 0.5 ? coupe.slice(0, i) : coupe).replace(/[\s\-–—:/,(]+$/, "");
+  return `${base}…`;
+}
+
 export function champsAffichage(offre: OffreAffichee) {
   const commun = (contrat: string | null) => {
     const [nom, ...reste] = (contrat ?? "").split(" - ");
@@ -90,7 +115,7 @@ export function champsAffichage(offre: OffreAffichee) {
   if (offre.source === "commercant") {
     return {
       ...commun(offre.type_contrat),
-      titre: offre.poste,
+      titre: nettoyerTitre(offre.poste),
       sousTitre: offre.nom_commerce,
       lieu: offre.quartier,
       contrat: offre.type_contrat,
@@ -109,7 +134,7 @@ export function champsAffichage(offre: OffreAffichee) {
   }
   return {
     ...commun(offre.type_contrat),
-    titre: offre.intitule,
+    titre: nettoyerTitre(offre.intitule),
     sousTitre: offre.entreprise_nom,
     lieu: offre.lieu_travail,
     contrat: offre.type_contrat,

@@ -20,6 +20,7 @@ import {
   initiales,
   joursDepuis,
   masquerEmail,
+  tronquer,
   type Filtres,
 } from "./borneUtils";
 
@@ -28,6 +29,8 @@ const SEUIL_GLISSEMENT_PX = 50;
 const DELAI_ENVOI_STATS_MS = 10_000;
 const DELAI_ROTATION_ATTENTE_MS = 9_000;
 const DELAI_CONFIRMATION_S = 45;
+const DELAI_VEILLE_MS = 30_000;
+const DUREE_COMPTEUR_MS = 1200;
 const MAX_SELECTION = 10;
 const PAGE = 5;
 const DELAI_MAX_ENTRE_APPUIS_MS = 1500;
@@ -88,6 +91,9 @@ export default function BorneClient({
   } | null>(null);
   const [panierQr, setPanierQr] = useState<{ id: string; lien: string } | null>(null);
   const [secondes, setSecondes] = useState(DELAI_CONFIRMATION_S);
+  const [veille, setVeille] = useState(false);
+  const [compteur, setCompteur] = useState(offres.length);
+  const veilleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [codeSortieOuvert, setCodeSortieOuvert] = useState(false);
   const [codeSortieValeur, setCodeSortieValeur] = useState("");
   const [codeSortieErreur, setCodeSortieErreur] = useState(false);
@@ -159,10 +165,57 @@ export default function BorneClient({
   }, [offreCourante?.id, mode]);
 
   // Rotation automatique des offres mises en avant sur l'accueil
+  // (un délai relancé à chaque changement garde la barre de progression alignée)
   useEffect(() => {
     if (mode !== "accueil") return;
-    const intervalle = setInterval(() => setIndexAttente((i) => i + 1), DELAI_ROTATION_ATTENTE_MS);
-    return () => clearInterval(intervalle);
+    const minuteur = setTimeout(() => setIndexAttente((i) => i + 1), DELAI_ROTATION_ATTENTE_MS);
+    return () => clearTimeout(minuteur);
+  }, [mode, indexAttente]);
+
+  // Compteur d'offres : défile de 0 au total au chargement puis toutes les 30 s
+  useEffect(() => {
+    if (mode !== "accueil") return;
+    const total = offres.length;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCompteur(total);
+      return;
+    }
+    let raf = 0;
+    const jouer = () => {
+      const debut = performance.now();
+      const pas = (t: number) => {
+        const p = Math.min(1, (t - debut) / DUREE_COMPTEUR_MS);
+        setCompteur(Math.round(total * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) raf = requestAnimationFrame(pas);
+      };
+      raf = requestAnimationFrame(pas);
+    };
+    jouer();
+    const intervalle = setInterval(jouer, 30_000);
+    return () => {
+      clearInterval(intervalle);
+      cancelAnimationFrame(raf);
+    };
+  }, [mode, offres.length]);
+
+  // Écran de veille : après 30 s sans contact, un bandeau invite à toucher l'écran
+  const armerVeille = () => {
+    if (veilleTimer.current) clearTimeout(veilleTimer.current);
+    setVeille(false);
+    veilleTimer.current = setTimeout(() => setVeille(true), DELAI_VEILLE_MS);
+  };
+
+  useEffect(() => {
+    if (mode !== "accueil") {
+      if (veilleTimer.current) clearTimeout(veilleTimer.current);
+      setVeille(false);
+      return;
+    }
+    armerVeille();
+    return () => {
+      if (veilleTimer.current) clearTimeout(veilleTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const revenirAAttente = () => {
@@ -180,6 +233,7 @@ export default function BorneClient({
 
   const reinitialiserInactivite = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (mode === "accueil") armerVeille();
     if (mode !== "accueil" && mode !== "confirmation") {
       timerRef.current = setTimeout(revenirAAttente, DELAI_INACTIVITE_MS);
     }
@@ -357,6 +411,8 @@ export default function BorneClient({
     const vedettes = (caseB.length > 0 ? caseB : caseA.length > 0 ? caseA : offres).slice(0, 6);
     const employeurs = caseB.length > 0 ? caseA.slice(0, 18) : [];
     const actif = vedettes.length > 0 ? indexAttente % vedettes.length : 0;
+    const ligneVille = `${rayonKm} km de ${villeAffichee}`;
+    const taillePitch = Math.min(120, Math.floor(900 / (Math.max(10, ligneVille.length) * 0.47)));
 
     let colonnes: OffreAffichee[][] = [];
     for (let k = 0; k < employeurs.length; k += 3) colonnes.push(employeurs.slice(k, k + 3));
@@ -364,57 +420,61 @@ export default function BorneClient({
 
     ecran = (
       <>
-        <section className="relative h-[548px] shrink-0 overflow-hidden bg-[#F7F5F0]">
+        <section className="relative shrink-0 overflow-hidden bg-[#F7F5F0]" style={{ height: 548 }}>
           {villePhotoUrl && (
-            <div
-              className="absolute right-0 top-0 w-[700px] bg-cover bg-center"
-              style={{ height: 540, backgroundImage: `url(${villePhotoUrl})` }}
-            />
+            <div className="absolute right-0 top-0 overflow-hidden" style={{ width: 756, height: 540 }}>
+              <div
+                className="bc-zoom h-full w-full bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${villePhotoUrl})`,
+                  filter: "brightness(1.1) saturate(1.15)",
+                }}
+              />
+            </div>
           )}
           <div
-            className="absolute left-0 top-0 h-[548px] w-[1080px]"
+            className="absolute left-0 top-0"
             style={{
+              width: 1080,
+              height: 548,
               background:
-                "linear-gradient(90deg, #EEF2F7 0%, rgba(238,242,247,0.96) 52%, rgba(238,242,247,0.55) 72%, rgba(238,242,247,0) 92%)",
+                "linear-gradient(90deg, #EEF2F7 0%, rgba(238,242,247,0.96) 44%, rgba(238,242,247,0.6) 62%, rgba(238,242,247,0) 88%)",
             }}
           />
           <div
-            className="absolute -bottom-0.5 left-0 h-[224px] w-[1080px]"
+            className="absolute -bottom-0.5 left-0"
             style={{
+              width: 1080,
+              height: 200,
               background:
-                "linear-gradient(180deg, rgba(247,245,240,0) 0%, rgba(247,245,240,0.85) 55%, #F7F5F0 100%)",
+                "linear-gradient(180deg, rgba(247,245,240,0) 0%, rgba(247,245,240,0.85) 60%, #F7F5F0 100%)",
             }}
           />
           <header className="absolute left-14 top-9">
             <Logo taille={40} />
           </header>
-          <span className="absolute left-14 top-[150px] flex h-[60px] items-center gap-3 rounded-full bg-[#E3F4EC] pl-4 pr-6 text-[28px] font-bold text-[#0A5C39]">
-            <Ic n="horloge" s={32} sw={2.4} />
+          <span
+            className="absolute left-14 flex items-center gap-3 rounded-full bg-[#0E8A4A] pl-4 pr-6 font-bold text-white"
+            style={{ top: 122, height: 56, fontSize: 26 }}
+          >
+            <Ic n="horloge" s={30} sw={2.4} />
             2 minutes chrono
           </span>
           <h1
-            className="absolute left-14 top-[228px] font-bold text-[#0F1A45]"
-            style={{
-              fontSize: Math.min(
-                98,
-                Math.floor(900 / (Math.max(20, `${rayonKm} km de ${villeAffichee}`.length) * 0.47))
-              ),
-              lineHeight: 1,
-              letterSpacing: "-0.04em",
-            }}
+            className="absolute left-14 font-bold text-[#0F1A45]"
+            style={{ top: 190, fontSize: taillePitch, lineHeight: 0.95, letterSpacing: "-0.04em" }}
           >
-            Un emploi à moins de
+            Un emploi
+            <br />à moins de
             <br />
-            <span className="text-[#0E8A4A]">
-              {rayonKm} km de {villeAffichee}
-            </span>
+            <span className="text-[#0E8A4A]">{rayonKm} km</span> de {villeAffichee}
           </h1>
         </section>
 
         <main className="relative flex grow flex-col justify-between px-12 pb-5 pt-4">
           {vedettes.length > 0 && (
             <div className="flex flex-col gap-0.5">
-              <div className="relative h-[340px]">
+              <div className="relative" style={{ height: 340 }}>
                 {vedettes.map((o, k) => {
                   const c = champsAffichage(o);
                   const visible = k === actif;
@@ -424,38 +484,51 @@ export default function BorneClient({
                       onClick={() => ouvrirOffreDepuisAccueil(o)}
                       aria-hidden={!visible}
                       tabIndex={visible ? 0 : -1}
-                      className="bc-fondu absolute left-0 top-0 flex h-[340px] w-[984px] overflow-hidden rounded-[32px] bg-white shadow-[0_1px_0_#E4E0D6,0_16px_40px_rgba(15,26,69,0.1)]"
-                      style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none" }}
+                      className="bc-fondu absolute left-0 top-0 flex overflow-hidden rounded-[32px] bg-white"
+                      style={{
+                        width: 984,
+                        height: 340,
+                        boxShadow: "0 24px 60px rgba(15,26,69,0.18)",
+                        opacity: visible ? 1 : 0,
+                        transform: visible ? "translateX(0)" : "translateX(24px)",
+                        pointerEvents: visible ? "auto" : "none",
+                      }}
                     >
-                      <div
-                        className="relative h-[340px] w-[440px] shrink-0"
-                        style={{ background: c.imageUrl && !c.estLogo ? "#DDE3EA" : couleurAvatar(c.sousTitre || c.titre) }}
-                      >
+                      <div className="relative shrink-0 bg-white" style={{ width: 440, height: 340 }}>
                         {c.imageUrl && !c.estLogo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={c.imageUrl} alt={c.imageAlt} className="h-full w-full object-cover" />
                         ) : c.imageUrl ? (
-                          <div className="flex h-full w-full items-center justify-center bg-[#DDE3EA] p-10">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={c.imageUrl} alt={c.imageAlt} className="max-h-full max-w-full object-contain" />
-                          </div>
-                        ) : (
-                          <>
+                          <div className="flex h-full w-full items-center justify-center bg-white">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={imageIllustration(c.titre, c.sousTitre, o.id).url}
-                              alt=""
-                              className="h-full w-full object-cover"
+                              src={c.imageUrl}
+                              alt={c.imageAlt}
+                              className="object-contain"
+                              style={{ maxWidth: "70%", maxHeight: "70%" }}
                             />
-                          </>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imageIllustration(c.titre, c.sousTitre, o.id).url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
                         )}
                       </div>
                       <div className="flex min-w-0 grow flex-col gap-2.5 px-8 py-[26px]">
-                        <span className="d block shrink-0 truncate text-[22px] font-bold" style={{ letterSpacing: "0.04em" }}>
-                          {(c.sousTitre ?? "").toUpperCase()}
+                        <span
+                          className="d block shrink-0 truncate font-semibold uppercase text-[#545A6B]"
+                          style={{ fontSize: 22, letterSpacing: "0.04em" }}
+                        >
+                          {c.sousTitre}
                         </span>
-                        <p className="d line-clamp-2 shrink-0 text-[44px] font-bold" style={{ lineHeight: 1.08, letterSpacing: "-0.02em" }}>
-                          {c.titre}
+                        <p
+                          className="d line-clamp-2 shrink-0 font-bold"
+                          style={{ fontSize: 44, lineHeight: 1.08, letterSpacing: "-0.02em" }}
+                        >
+                          {tronquer(c.titre, 46)}
                         </p>
                         <div className="flex shrink-0 items-center gap-[22px] whitespace-nowrap text-[22px] text-[#3B4152]">
                           {c.lieu && (
@@ -482,7 +555,7 @@ export default function BorneClient({
                             {c.description}
                           </p>
                         )}
-                        <span className="mt-auto flex h-[76px] items-center justify-center gap-3.5 rounded-[20px] bg-[#2B3BE0] text-[28px] font-bold text-white">
+                        <span className="mt-auto flex items-center justify-center gap-3.5 rounded-[20px] bg-[#2B3BE0] text-[28px] font-bold text-white" style={{ height: 76 }}>
                           Voir l’offre
                           <Ic n="fleche" s={30} sw={2.4} />
                         </span>
@@ -501,9 +574,16 @@ export default function BorneClient({
                       className="flex h-10 w-12 items-center justify-center"
                     >
                       <span
-                        className="h-2.5 rounded-full transition-[width] duration-300"
-                        style={{ width: k === actif ? 40 : 10, background: k === actif ? "#0F1A45" : "#C9C4B6" }}
-                      />
+                        className="relative overflow-hidden rounded-full transition-[width] duration-300"
+                        style={{ height: 10, width: k === actif ? 40 : 10, background: "#C9C4B6" }}
+                      >
+                        {k === actif && (
+                          <span
+                            key={indexAttente}
+                            className="bc-remplir absolute inset-y-0 left-0 rounded-full bg-[#0F1A45]"
+                          />
+                        )}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -512,15 +592,32 @@ export default function BorneClient({
           )}
 
           <div className="flex items-center justify-between gap-6">
-            <p className="d whitespace-nowrap text-[38px] font-bold" style={{ lineHeight: 1, letterSpacing: "-0.025em" }}>
-              <span className="text-[68px] text-[#0E8A4A]" style={{ letterSpacing: "-0.04em" }}>
-                {offres.length}
-              </span>{" "}
-              offres disponibles aujourd’hui
-            </p>
+            <div className="flex items-center gap-4">
+              <span
+                className="d font-bold tabular-nums text-[#0E8A4A]"
+                style={{ fontSize: 96, lineHeight: 0.9, letterSpacing: "-0.04em" }}
+              >
+                {compteur}
+              </span>
+              <div className="flex flex-col gap-1.5">
+                <span className="d font-bold" style={{ fontSize: 36, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
+                  offres disponibles
+                  <br />
+                  aujourd’hui
+                </span>
+                <span className="flex items-center gap-2.5 font-semibold text-[#0A5C39]" style={{ fontSize: 22 }}>
+                  <span className="relative flex h-3 w-3">
+                    <span className="bc-ping absolute inset-0 rounded-full bg-[#0E8A4A]" />
+                    <span className="relative h-3 w-3 rounded-full bg-[#0E8A4A]" />
+                  </span>
+                  en direct
+                </span>
+              </div>
+            </div>
             <button
               onClick={() => setMode("recherche")}
-              className="flex h-[76px] shrink-0 items-center gap-3 rounded-full bg-white pl-[22px] pr-7 text-2xl font-bold text-[#2B3BE0] shadow-[inset_0_0_0_2px_#2B3BE0]"
+              className="flex shrink-0 items-center gap-3 rounded-full bg-white pl-[22px] pr-7 text-2xl font-bold text-[#2B3BE0] shadow-[inset_0_0_0_2px_#2B3BE0]"
+              style={{ height: 76 }}
             >
               <Ic n="loupe" s={28} />
               Rechercher
@@ -528,14 +625,12 @@ export default function BorneClient({
           </div>
 
           <div className="flex items-center gap-3">
-            <div
-              className="min-w-0 grow overflow-x-auto"
-              style={{ scrollbarWidth: "none" }}
-            >
+            <div className="min-w-0 grow overflow-x-auto" style={{ scrollbarWidth: "none" }}>
               <div className="flex w-max gap-3">
                 <button
                   onClick={() => allerAuxOffres()}
-                  className="flex h-20 items-center gap-3 rounded-[22px] bg-[#2B3BE0] pl-5 pr-[26px] text-2xl font-bold text-white"
+                  className="flex items-center gap-3 rounded-[22px] bg-[#2B3BE0] pl-5 pr-[26px] font-bold text-white"
+                  style={{ height: 84, fontSize: 26 }}
                 >
                   <Ic n="grille" s={28} sw={2} />
                   Tous
@@ -544,7 +639,8 @@ export default function BorneClient({
                   <button
                     key={s.id}
                     onClick={() => allerAuxOffres({ secteur: s.id })}
-                    className="bc-anneau flex h-20 items-center gap-3 rounded-[22px] bg-white pl-5 pr-[26px] text-2xl font-bold"
+                    className="bc-anneau flex items-center gap-3 rounded-[22px] bg-white pl-5 pr-[26px] font-bold"
+                    style={{ height: 84, fontSize: 26 }}
                   >
                     {s.libelle}
                   </button>
@@ -559,8 +655,8 @@ export default function BorneClient({
               <div
                 className="bc-defilant -mx-12 overflow-hidden pb-1"
                 style={{
-                  WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 40px, #000 1040px, transparent 1080px)",
-                  maskImage: "linear-gradient(90deg, transparent 0, #000 40px, #000 1040px, transparent 1080px)",
+                  WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 60px, #000 1020px, transparent 1080px)",
+                  maskImage: "linear-gradient(90deg, transparent 0, #000 60px, #000 1020px, transparent 1080px)",
                 }}
               >
                 <div
@@ -568,14 +664,15 @@ export default function BorneClient({
                   style={{ marginLeft: 48, animationDuration: `${colonnes.length * 32}s` }}
                 >
                   {[...colonnes, ...colonnes].map((col, ci) => (
-                    <div key={ci} className="mr-4 flex w-[484px] shrink-0 flex-col gap-3.5">
+                    <div key={ci} className="mr-4 flex shrink-0 flex-col gap-3.5" style={{ width: 484 }}>
                       {col.map((o) => {
                         const c = champsAffichage(o);
                         return (
                           <button
                             key={`${o.source}-${o.id}`}
                             onClick={() => ouvrirOffreDepuisAccueil(o)}
-                            className="bc-carte box-border flex h-36 items-center gap-4 rounded-3xl pl-[18px] pr-4"
+                            className="bc-carte box-border flex items-center gap-4 rounded-3xl pl-[18px] pr-4"
+                            style={{ height: 136 }}
                           >
                             <Vignette
                               titre={c.titre}
@@ -583,14 +680,19 @@ export default function BorneClient({
                               imageUrl={c.imageUrl}
                               estLogo={c.estLogo}
                               cle={o.id}
-                              className="h-[92px] w-[92px] rounded-[18px]"
+                              className="h-[88px] w-[88px] rounded-[16px]"
                             />
                             <span className="flex min-w-0 grow flex-col gap-[3px]">
                               <span className="line-clamp-2 text-[23px] font-bold" style={{ lineHeight: 1.15 }}>
-                                {c.titre}
+                                {tronquer(c.titre, 58)}
                               </span>
-                              <span className="truncate text-[21px] text-[#545A6B]">{c.sousTitre}</span>
-                              <span className="mt-1 flex items-center gap-3.5 whitespace-nowrap text-[21px] text-[#3B4152]">
+                              <span
+                                className="truncate font-semibold uppercase text-[#545A6B]"
+                                style={{ fontSize: 20, letterSpacing: "0.04em" }}
+                              >
+                                {c.sousTitre}
+                              </span>
+                              <span className="mt-0.5 flex items-center gap-3.5 whitespace-nowrap text-[21px] text-[#3B4152]">
                                 {c.contratNom && (
                                   <span className="flex items-center gap-2">
                                     <span className="h-3.5 w-3.5 rounded-full" style={{ background: couleurContrat(c.contratNom) }} />
@@ -618,21 +720,38 @@ export default function BorneClient({
             </section>
           )}
 
-          <button
-            onClick={() => allerAuxOffres()}
-            className="bc-vert flex h-[132px] items-center justify-center gap-6 rounded-full"
-          >
-            <Ic n="loupe" s={52} sw={2.4} />
-            <span className="d text-[48px] font-bold" style={{ letterSpacing: "0.01em" }}>
-              VOIR LES {offres.length} OFFRES
-            </span>
-            <Ic n="fleche" s={48} sw={2.4} />
-          </button>
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="bc-halo-cta absolute inset-0 rounded-full bg-[#0E8A4A]"
+            />
+            <button
+              onClick={() => allerAuxOffres()}
+              className="bc-vert bc-respire relative flex w-full items-center justify-center gap-6 rounded-full"
+              style={{ height: 132, boxShadow: "0 16px 40px rgba(14,138,74,0.35)" }}
+            >
+              <Ic n="loupe" s={52} sw={2.4} />
+              <span className="d text-[48px] font-bold" style={{ letterSpacing: "0.01em" }}>
+                VOIR LES {offres.length} OFFRES
+              </span>
+              <Ic n="fleche" s={48} sw={2.4} />
+            </button>
+          </div>
+
+          {veille && (
+            <div
+              className="bc-pulse pointer-events-none absolute left-12 right-12 flex items-center justify-center gap-4 rounded-full bg-[#0F1A45] text-white"
+              style={{ bottom: 168, height: 64, fontSize: 28, fontWeight: 700 }}
+            >
+              <Ic n="main" s={34} sw={2} />
+              Touchez l’écran pour voir les offres
+            </div>
+          )}
         </main>
 
-        <footer className="relative flex h-[124px] shrink-0 items-center gap-5 px-12">
+        <footer className="relative flex shrink-0 items-center gap-5 px-12" style={{ height: 124 }}>
           <div className="flex flex-col gap-1.5">
-            <span className="text-[19px] text-[#3B4152]">Une initiative de votre ville</span>
+            <span className="text-[20px] text-[#3B4152]">Une initiative de votre ville</span>
             {villeLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={villeLogoUrl} alt={`Logo de ${villeAffichee}`} className="h-[64px] w-auto max-w-[240px] object-contain object-left" />
@@ -641,10 +760,10 @@ export default function BorneClient({
             )}
           </div>
           <div className="flex grow flex-col items-end gap-1.5">
-            <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
+            <span className="text-[20px] text-[#3B4152]">En partenariat avec</span>
             <LogoFranceTravail />
           </div>
-          <span className="absolute inset-x-0 bottom-1 text-center text-[13px] text-[#8A867B]">
+          <span className="absolute inset-x-0 bottom-1 text-center text-[20px] text-[#545A6B]">
             Photos d’illustration : Pexels
           </span>
         </footer>
@@ -891,7 +1010,7 @@ export default function BorneClient({
                       <span className="flex min-w-0 grow flex-col gap-1">
                         <span className="flex items-center gap-3">
                           <span className="d line-clamp-2 text-[30px] font-bold" style={{ lineHeight: 1.12, letterSpacing: "-0.015em" }}>
-                            {c.titre}
+                            {tronquer(c.titre, 54)}
                           </span>
                           {estNouvelle(o) && (
                             <span className="flex h-[34px] shrink-0 items-center rounded-full bg-[#E3F4EC] px-3 text-[19px] font-bold text-[#0A5C39]">

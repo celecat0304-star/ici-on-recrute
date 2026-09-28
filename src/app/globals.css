@@ -92,8 +92,38 @@ button:active {
   animation-play-state: paused;
 }
 .bc-fondu {
-  transition: opacity 0.5s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
+@keyframes bc-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+.bc-zoom { animation: bc-zoom 20s ease-in-out infinite alternate; }
+@keyframes bc-remplir {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.bc-remplir { animation: bc-remplir 9s linear forwards; }
+@keyframes bc-respire {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+.bc-respire { animation: bc-respire 3s ease-in-out infinite; }
+@keyframes bc-halo-cta {
+  from { transform: scale(1); opacity: 0.35; }
+  to { transform: scale(1.1, 1.4); opacity: 0; }
+}
+.bc-halo-cta { animation: bc-halo-cta 3s ease-out infinite; }
+@keyframes bc-ping {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+.bc-ping { animation: bc-ping 1.6s ease-out infinite; }
+@keyframes bc-pulse {
+  0%, 100% { opacity: 0.88; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+.bc-pulse { animation: bc-pulse 2s ease-in-out infinite; }
 @keyframes bc-pop {
   from { transform: scale(0.4); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -112,6 +142,8 @@ button:active {
 @media (prefers-reduced-motion: reduce) {
   .bc-piste { animation-duration: 200s; }
   .bc-fondu, .bc-pop, .bc-trace, .bc-halo { transition: none; animation: none; }
+  .bc-zoom, .bc-respire, .bc-halo-cta, .bc-ping, .bc-pulse { animation: none; }
+  .bc-remplir { animation: none; width: 100%; }
 }
 
 :focus-visible {
