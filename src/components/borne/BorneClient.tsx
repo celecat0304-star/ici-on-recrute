@@ -40,6 +40,7 @@ type Props = {
   villeSlug: string;
   villePhotoUrl?: string | null;
   villeLogoUrl?: string | null;
+  rayonKm?: number;
   offres: OffreAffichee[];
   caseA: OffreAffichee[];
   caseB: OffreAffichee[];
@@ -64,6 +65,7 @@ export default function BorneClient({
   villeNom,
   villePhotoUrl = null,
   villeLogoUrl = null,
+  rayonKm = 10,
   offres,
   caseA,
   caseB,
@@ -362,11 +364,11 @@ export default function BorneClient({
 
     ecran = (
       <>
-        <section className="relative h-[548px] shrink-0 overflow-hidden bg-[#E4EAF3]">
+        <section className="relative h-[548px] shrink-0 overflow-hidden bg-[#F7F5F0]">
           {villePhotoUrl && (
             <div
-              className="absolute right-0 top-0 h-[548px] w-[700px] bg-cover bg-center"
-              style={{ backgroundImage: `url(${villePhotoUrl})` }}
+              className="absolute right-0 top-0 w-[700px] bg-cover bg-center"
+              style={{ height: 540, backgroundImage: `url(${villePhotoUrl})` }}
             />
           )}
           <div
@@ -377,7 +379,7 @@ export default function BorneClient({
             }}
           />
           <div
-            className="absolute bottom-0 left-0 h-[220px] w-[1080px]"
+            className="absolute -bottom-0.5 left-0 h-[224px] w-[1080px]"
             style={{
               background:
                 "linear-gradient(180deg, rgba(247,245,240,0) 0%, rgba(247,245,240,0.85) 55%, #F7F5F0 100%)",
@@ -386,17 +388,26 @@ export default function BorneClient({
           <header className="absolute left-14 top-9">
             <Logo taille={40} />
           </header>
+          <span className="absolute left-14 top-[150px] flex h-[60px] items-center gap-3 rounded-full bg-[#E3F4EC] pl-4 pr-6 text-[28px] font-bold text-[#0A5C39]">
+            <Ic n="horloge" s={32} sw={2.4} />
+            2 minutes chrono
+          </span>
           <h1
-            className="absolute left-14 top-[184px] font-bold text-[#0F1A45]"
+            className="absolute left-14 top-[228px] font-bold text-[#0F1A45]"
             style={{
-              fontSize: villeAffichee.length > 10 ? 84 : 112,
-              lineHeight: 0.98,
+              fontSize: Math.min(
+                98,
+                Math.floor(900 / (Math.max(20, `${rayonKm} km de ${villeAffichee}`.length) * 0.47))
+              ),
+              lineHeight: 1,
               letterSpacing: "-0.04em",
             }}
           >
-            Trouvez un emploi
+            Un emploi à moins de
             <br />
-            <span className="text-[#0E8A4A]">à {villeAffichee}</span>
+            <span className="text-[#0E8A4A]">
+              {rayonKm} km de {villeAffichee}
+            </span>
           </h1>
         </section>
 
@@ -438,10 +449,6 @@ export default function BorneClient({
                             />
                           </>
                         )}
-                        <span className="absolute left-5 top-5 flex h-12 items-center gap-2.5 rounded-full border-2 border-white/60 bg-[#0F1A45] pl-4 pr-5 text-[21px] font-bold text-white" style={{ letterSpacing: "0.04em" }}>
-                          <Ic n="etoile" s={22} rempli sw={0} />
-                          {c.estCommercant ? "COMMERÇANT DU COIN" : "OFFRE À LA UNE"}
-                        </span>
                       </div>
                       <div className="flex min-w-0 grow flex-col gap-2.5 px-8 py-[26px]">
                         <span className="d block shrink-0 truncate text-[22px] font-bold" style={{ letterSpacing: "0.04em" }}>
@@ -558,7 +565,7 @@ export default function BorneClient({
               >
                 <div
                   className="bc-piste flex w-max"
-                  style={{ marginLeft: 48, animationDuration: `${colonnes.length * 12}s` }}
+                  style={{ marginLeft: 48, animationDuration: `${colonnes.length * 32}s` }}
                 >
                   {[...colonnes, ...colonnes].map((col, ci) => (
                     <div key={ci} className="mr-4 flex w-[484px] shrink-0 flex-col gap-3.5">
@@ -623,7 +630,7 @@ export default function BorneClient({
           </button>
         </main>
 
-        <footer className="flex h-[124px] shrink-0 items-center gap-5 px-12">
+        <footer className="relative flex h-[124px] shrink-0 items-center gap-5 px-12">
           <div className="flex flex-col gap-1.5">
             <span className="text-[19px] text-[#3B4152]">Une initiative de votre ville</span>
             {villeLogoUrl ? (
@@ -633,13 +640,13 @@ export default function BorneClient({
               <span className="d text-[30px] font-bold">{villeAffichee}</span>
             )}
           </div>
-          <div className="flex grow flex-col items-end gap-1">
-            <div className="flex items-center gap-3.5">
-              <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
-              <LogoFranceTravail />
-            </div>
-            <span className="text-[14px] text-[#8A867B]">Photos d’illustration : Pexels</span>
+          <div className="flex grow flex-col items-end gap-1.5">
+            <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
+            <LogoFranceTravail />
           </div>
+          <span className="absolute inset-x-0 bottom-1 text-center text-[13px] text-[#8A867B]">
+            Photos d’illustration : Pexels
+          </span>
         </footer>
       </>
     );

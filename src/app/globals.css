@@ -63,11 +63,11 @@ button:active {
 .borne p {
   margin: 0;
 }
-.borne button {
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
+@layer components {
+  .borne button {
+    text-align: left;
+    cursor: pointer;
+  }
 }
 .bc-carte {
   background: #fff;

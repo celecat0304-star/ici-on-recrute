@@ -178,7 +178,7 @@ export function LogoFranceTravail() {
       src="/logo-france-travail.png"
       alt="France Travail"
       onError={() => setAbsent(true)}
-      className="h-[76px] w-auto object-contain"
+      className="h-[64px] w-auto object-contain"
     />
   );
 }
