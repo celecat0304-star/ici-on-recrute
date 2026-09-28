@@ -41,10 +41,11 @@ export function formaterEuros(n: number) {
   return `${n.toLocaleString("fr-FR").replace(/ | /g, " ")} €`;
 }
 
+// Estimation à partir du salaire publié dans l'offre (converti en brut mensuel) : toujours présentée comme approximative.
 export function salaireAffiche(min: number | null, max: number | null) {
   if (min == null) return null;
-  if (max == null || max <= min) return `${formaterEuros(min)} / mois`;
-  return `${formaterEuros(min)} à ${formaterEuros(max)} / mois`;
+  if (max == null || max <= min) return `≈ ${formaterEuros(min)} brut / mois`;
+  return `≈ ${formaterEuros(min)} à ${formaterEuros(max)} brut / mois`;
 }
 
 export const CONTRATS = ["CDI", "CDD", "Intérim", "Alternance", "Saisonnier"];
@@ -187,6 +188,7 @@ export function champsAffichage(offre: OffreAffichee) {
       longitude: null as number | null,
       salaireMin: null as number | null,
       salaireMax: null as number | null,
+      salaireTexte: null as string | null,
     };
   }
   return {
@@ -210,6 +212,7 @@ export function champsAffichage(offre: OffreAffichee) {
     longitude: offre.longitude ?? null,
     salaireMin: offre.salaire_mensuel_min ?? null,
     salaireMax: offre.salaire_mensuel_max ?? null,
+    salaireTexte: offre.salaire_libelle ?? null,
   };
 }
 

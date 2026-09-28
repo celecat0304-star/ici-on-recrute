@@ -1338,9 +1338,15 @@ export default function BorneClient({
         valeur: jours === 0 ? "Aujourd’hui" : jours === 1 ? "Hier" : `Il y a ${jours} jours`,
         detail: "",
       },
+      salaireAffiche(infos.salaireMin, infos.salaireMax) && {
+        icone: "euro" as const,
+        libelle: "Salaire estimé",
+        valeur: salaireAffiche(infos.salaireMin, infos.salaireMax)!,
+        detail: infos.salaireTexte ? `Annonce : ${infos.salaireTexte}` : "",
+      },
       { icone: "boutique" as const, libelle: "Source", valeur: infos.sourceLabel, detail: "" },
     ].filter(Boolean) as {
-      icone: "doc" | "pin" | "horloge" | "calendrier" | "boutique";
+      icone: "doc" | "pin" | "horloge" | "calendrier" | "boutique" | "euro";
       libelle: string;
       valeur: string;
       point?: string;

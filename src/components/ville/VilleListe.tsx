@@ -13,12 +13,23 @@ import {
   IconeLoupe,
 } from "@/components/icones/Icones";
 import {
+  DISTANCES_KM,
+  FILTRES_VIDES,
+  SALAIRES_MIN,
+  SECTEURS,
   champsAffichage,
+  correspond,
   couleurContrat,
+  distanceOffre,
+  formaterEuros,
   nettoyerLieu,
+  salaireAffiche,
   tronquer,
+  type Domicile,
+  type Filtres,
 } from "@/components/borne/borneUtils";
 import { Vignette } from "@/components/borne/BorneComposants";
+import { useCommunes } from "@/lib/useCommunes";
 
 type Filtre = "toutes" | "commerces" | "cdi" | "temps_partiel";
 
@@ -35,18 +46,38 @@ export default function VilleListe({
   offres,
   villeSlug,
   departement,
+  centreVille = null,
 }: {
   offres: OffreAffichee[];
   villeSlug: string;
   departement?: string;
+  centreVille?: { latitude: number; longitude: number } | null;
 }) {
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<Filtre>("toutes");
   const [visibles, setVisibles] = useState(PAGE);
+  const [panneauOuvert, setPanneauOuvert] = useState(false);
+  const [avances, setAvances] = useState<Filtres>(FILTRES_VIDES);
+  const [domicile, setDomicile] = useState<Domicile | null>(null);
+  const [saisieCommune, setSaisieCommune] = useState("");
+  const { suggestions, enCours } = useCommunes(saisieCommune);
+
+  const majAvances = (partiel: Partial<Filtres>) => {
+    setAvances((a) => ({ ...a, ...partiel }));
+    setVisibles(PAGE);
+  };
+  const nbCriteres =
+    (domicile ? 1 : 0) +
+    (avances.distanceKm != null ? 1 : 0) +
+    (avances.salaireMin != null ? 1 : 0) +
+    (avances.secteur ? 1 : 0);
+
+  const ctx = useMemo(() => ({ domicile, centreVille }), [domicile, centreVille]);
 
   const offresFiltrees = useMemo(() => {
     const rechercheMinuscule = recherche.trim().toLowerCase();
-    return offres.filter((offre) => {
+    const liste = offres.filter((offre) => {
+      if (!correspond(offre, avances, ctx)) return false;
       const c = champsAffichage(offre);
       if (filtre === "commerces" && offre.source !== "commercant") return false;
       if (filtre === "cdi" && c.contratNom !== "CDI") return false;
@@ -58,7 +89,13 @@ export default function VilleListe({
       if (!rechercheMinuscule) return true;
       return `${c.titre} ${c.sousTitre ?? ""}`.toLowerCase().includes(rechercheMinuscule);
     });
-  }, [offres, recherche, filtre]);
+    // Avec un domicile renseigné, les offres les plus proches passent en premier
+    if (!ctx.domicile) return liste;
+    return liste
+      .map((o) => ({ o, d: distanceOffre(o, ctx) ?? Infinity }))
+      .sort((a, b) => a.d - b.d)
+      .map((x) => x.o);
+  }, [offres, recherche, filtre, avances, ctx]);
 
   const affichees = offresFiltrees.slice(0, visibles);
   const restantes = offresFiltrees.length - affichees.length;
@@ -107,6 +144,165 @@ export default function VilleListe({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => setPanneauOuvert((o) => !o)}
+          aria-expanded={panneauOuvert}
+          className="flex h-12 w-full items-center justify-between rounded-2xl border border-[#E4E0D6] bg-white px-4 text-base font-bold sm:w-fit sm:gap-4"
+        >
+          <span className="flex items-center gap-2">
+            <IconePin className="h-5 w-5 text-[#2B3BE0]" />
+            Affiner : distance, salaire, domaine
+            {nbCriteres > 0 && (
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#2B3BE0] px-1.5 text-sm text-white">
+                {nbCriteres}
+              </span>
+            )}
+          </span>
+          <IconeChevron className={"h-4 w-4 transition-transform " + (panneauOuvert ? "-rotate-90" : "rotate-90")} />
+        </button>
+
+        {panneauOuvert && (
+          <div className="flex flex-col gap-6 rounded-2xl bg-white p-4 shadow-[0_1px_0_#E4E0D6,0_6px_18px_rgba(15,26,69,0.05)] sm:p-5">
+            <section className="flex flex-col gap-3">
+              <h3 className="text-lg font-bold">Où habitez-vous ?</h3>
+              {domicile ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-[#F7F5F0] px-4 py-3">
+                  <span className="flex items-center gap-2 text-base font-bold">
+                    <IconePin className="h-5 w-5 text-[#0E8A4A]" />
+                    {domicile.nom}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setDomicile(null);
+                      majAvances({ distanceKm: null });
+                    }}
+                    className="h-11 rounded-full bg-white px-4 text-base font-bold shadow-[inset_0_0_0_2px_#E4E0D6]"
+                  >
+                    Changer
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    value={saisieCommune}
+                    onChange={(e) => setSaisieCommune(e.target.value)}
+                    placeholder="Votre commune ou code postal"
+                    aria-label="Votre commune ou code postal"
+                    className="h-14 w-full rounded-xl border border-[#E4E0D6] bg-white px-4 text-base outline-none focus:border-[#2B3BE0] focus:ring-2 focus:ring-[#2B3BE0]/20"
+                  />
+                  {suggestions.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      {suggestions.map((s) => (
+                        <button
+                          key={`${s.nom}-${s.codePostal}`}
+                          onClick={() => {
+                            setDomicile({ nom: s.nom, latitude: s.latitude, longitude: s.longitude });
+                            setSaisieCommune("");
+                            majAvances({ distanceKm: avances.distanceKm ?? 10 });
+                          }}
+                          className="flex h-12 items-center gap-2 rounded-xl border border-[#E4E0D6] bg-white px-4 text-left text-base font-bold"
+                        >
+                          <IconePin className="h-5 w-5 text-[#0E8A4A]" />
+                          {s.nom} <span className="font-normal text-[#545A6B]">{s.codePostal}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {saisieCommune.trim().length >= 2 && suggestions.length === 0 && !enCours && (
+                    <p className="text-sm text-[#545A6B]">Aucune commune trouvée.</p>
+                  )}
+                  <p className="text-sm text-[#545A6B]">
+                    Les offres les plus proches de chez vous passent en premier.
+                  </p>
+                </>
+              )}
+              {domicile && (
+                <div className="flex flex-wrap gap-2">
+                  {[null, ...DISTANCES_KM].map((km) => (
+                    <button
+                      key={km ?? "tous"}
+                      onClick={() => majAvances({ distanceKm: km })}
+                      aria-pressed={avances.distanceKm === km}
+                      className={
+                        "h-11 rounded-full border px-4 text-base font-bold " +
+                        (avances.distanceKm === km
+                          ? "border-[#2B3BE0] bg-[#2B3BE0] text-white"
+                          : "border-[#E4E0D6] bg-white text-[#3B4152]")
+                      }
+                    >
+                      {km === null ? "Peu importe" : `Moins de ${km} km`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <h3 className="text-lg font-bold">Salaire minimum</h3>
+              <p className="text-sm text-[#545A6B]">
+                Estimation brute par mois, d’après le salaire indiqué dans l’offre.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[null, ...SALAIRES_MIN].map((s) => (
+                  <button
+                    key={s ?? "tous"}
+                    onClick={() => majAvances({ salaireMin: s })}
+                    aria-pressed={avances.salaireMin === s}
+                    className={
+                      "h-11 rounded-full border px-4 text-base font-bold " +
+                      (avances.salaireMin === s
+                        ? "border-[#2B3BE0] bg-[#2B3BE0] text-white"
+                        : "border-[#E4E0D6] bg-white text-[#3B4152]")
+                    }
+                  >
+                    {s === null ? "Peu importe" : `${formaterEuros(s)} et +`}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <h3 className="text-lg font-bold">Domaine</h3>
+              <div className="flex flex-wrap gap-2">
+                {SECTEURS.map((s) => {
+                  const actif = avances.secteur === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => majAvances({ secteur: actif ? null : s.id })}
+                      aria-pressed={actif}
+                      className={
+                        "h-11 rounded-full border px-4 text-base font-bold " +
+                        (actif
+                          ? "border-[#2B3BE0] bg-[#2B3BE0] text-white"
+                          : "border-[#E4E0D6] bg-white text-[#3B4152]")
+                      }
+                    >
+                      {s.libelle}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {nbCriteres > 0 && (
+              <button
+                onClick={() => {
+                  setAvances(FILTRES_VIDES);
+                  setDomicile(null);
+                  setSaisieCommune("");
+                  setVisibles(PAGE);
+                }}
+                className="h-12 w-full rounded-xl border-2 border-[#0F1A45] bg-white text-base font-bold"
+              >
+                Tout réinitialiser
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <p className="text-sm text-[#545A6B]">
@@ -165,9 +361,16 @@ export default function VilleListe({
                       <span className="flex items-center gap-1">
                         <IconePin className="h-4 w-4" />
                         {lieu}
+                        {distanceOffre(offre, ctx) !== null &&
+                          ` · ${Math.max(1, Math.round(distanceOffre(offre, ctx)!))} km`}
                       </span>
                     )}
                   </div>
+                  {salaireAffiche(c.salaireMin, c.salaireMax) && (
+                    <p className="mt-1 text-sm font-bold text-[#0A5C39]">
+                      {salaireAffiche(c.salaireMin, c.salaireMax)}
+                    </p>
+                  )}
                 </div>
 
                 <span

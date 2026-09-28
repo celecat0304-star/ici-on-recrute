@@ -35,7 +35,7 @@ export default async function BornePage({
       supabase
         .from("offres_france_travail")
         .select(
-          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif, latitude, longitude, salaire_mensuel_min, salaire_mensuel_max"
+          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif, latitude, longitude, salaire_libelle, salaire_mensuel_min, salaire_mensuel_max"
         )
         .eq("ville_id", borne.ville_id)
         .order("date_publication", { ascending: false })

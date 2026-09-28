@@ -71,6 +71,7 @@ const ICONES = {
       <path d="M4 20a8 8 0 0 1 16 0" />
     </>
   ),
+  euro: <path d="M17 6.5A7 7 0 1 0 17 17.5M4 10h9M4 14h9" />,
   main: (
     <>
       <path d="M22 14a8 8 0 0 1-8 8" />

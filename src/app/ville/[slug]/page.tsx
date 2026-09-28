@@ -52,7 +52,7 @@ export default async function VillePage({
 
   const { data: ville } = await supabase
     .from("villes")
-    .select("id, nom, slug, code_postal, logo_url, photo_hero_url")
+    .select("id, nom, slug, code_postal, logo_url, photo_hero_url, latitude, longitude")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -63,7 +63,7 @@ export default async function VillePage({
       supabase
         .from("offres_france_travail")
         .select(
-          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif"
+          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif, latitude, longitude, salaire_mensuel_min, salaire_mensuel_max"
         )
         .eq("ville_id", ville.id)
         .order("date_publication", { ascending: false })
@@ -285,7 +285,16 @@ export default async function VillePage({
           </a>
         </div>
 
-        <VilleListe offres={offresListe} villeSlug={ville.slug} departement={departement} />
+        <VilleListe
+          offres={offresListe}
+          villeSlug={ville.slug}
+          departement={departement}
+          centreVille={
+            ville.latitude != null && ville.longitude != null
+              ? { latitude: ville.latitude, longitude: ville.longitude }
+              : null
+          }
+        />
       </main>
 
       <footer className="border-t border-[#E4E0D6] bg-white">

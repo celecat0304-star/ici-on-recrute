@@ -4,12 +4,14 @@ import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import CandidatureForm from "@/components/ville/CandidatureForm";
 import { imageIllustration } from "@/lib/imagesThemes";
+import { salaireAffiche } from "@/components/borne/borneUtils";
 import {
   IconePin,
   IconeDocument,
   IconeCalendrier,
   IconeChevron,
   IconeMallette,
+  IconePiece,
 } from "@/components/icones/Icones";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +37,7 @@ async function chargerOffre(villeId: string, id: string) {
   const { data: offreFranceTravail } = await supabase
     .from("offres_france_travail")
     .select(
-      "id, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication"
+      "id, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, salaire_libelle, salaire_mensuel_min, salaire_mensuel_max"
     )
     .eq("id", id)
     .eq("ville_id", villeId)
@@ -187,6 +189,19 @@ export default async function OffreDetailPage({
               </span>
             )}
           </div>
+
+          {source === "france_travail" &&
+            salaireAffiche(offre.salaire_mensuel_min ?? null, offre.salaire_mensuel_max ?? null) && (
+              <div className="rounded-xl bg-[#E3F4EC] px-4 py-3 text-[#0A5C39]">
+                <p className="flex items-center gap-2 font-bold">
+                  <IconePiece className="w-4 h-4" />
+                  {salaireAffiche(offre.salaire_mensuel_min ?? null, offre.salaire_mensuel_max ?? null)}
+                </p>
+                {offre.salaire_libelle && (
+                  <p className="mt-0.5 text-sm">Dans l&apos;annonce : {offre.salaire_libelle}</p>
+                )}
+              </div>
+            )}
 
           {offre.description && (
             <p className="whitespace-pre-line mt-2 leading-relaxed opacity-90">
