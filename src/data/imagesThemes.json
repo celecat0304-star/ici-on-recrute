@@ -953,14 +953,80 @@
    "lienPhotographe": "https://www.pexels.com/@n-voitkevich",
    "lienPexels": "https://www.pexels.com/photo/man-writing-and-sitting-near-woman-in-glasses-5186339/",
    "couleur": "#B3AD9D"
+  }
+ ],
+ "beaute": [
+  {
+   "id": 3993320,
+   "url": "https://images.pexels.com/photos/3993320/pexels-photo-3993320.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "cottonbro studio",
+   "lienPhotographe": "https://www.pexels.com/@cottonbro",
+   "lienPexels": "https://www.pexels.com/photo/woman-getting-a-haircut-3993320/",
+   "couleur": "#696362"
   },
   {
-   "id": 5410081,
-   "url": "https://images.pexels.com/photos/5410081/pexels-photo-5410081.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-   "photographe": "Amina Filkins",
-   "lienPhotographe": "https://www.pexels.com/@amina-filkins",
-   "lienPexels": "https://www.pexels.com/photo/pensive-woman-near-flowers-in-wrapper-5410081/",
-   "couleur": "#8E8772"
+   "id": 12115016,
+   "url": "https://images.pexels.com/photos/12115016/pexels-photo-12115016.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "Denys Mikhalevych",
+   "lienPhotographe": "https://www.pexels.com/@denys",
+   "lienPexels": "https://www.pexels.com/photo/beautician-showing-woman-results-of-cosmetic-treatment-12115016/",
+   "couleur": "#DDD5D2"
+  },
+  {
+   "id": 3037244,
+   "url": "https://images.pexels.com/photos/3037244/pexels-photo-3037244.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "mostafa meraji",
+   "lienPhotographe": "https://www.pexels.com/@mostafameraji",
+   "lienPexels": "https://www.pexels.com/photo/man-holds-black-hair-shaver-3037244/",
+   "couleur": "#1B1E24"
+  },
+  {
+   "id": 8834018,
+   "url": "https://images.pexels.com/photos/8834018/pexels-photo-8834018.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "Kampus Production",
+   "lienPhotographe": "https://www.pexels.com/@kampus",
+   "lienPexels": "https://www.pexels.com/photo/woman-in-black-outfit-standing-near-round-mirrors-why-smiling-at-the-camera-8834018/",
+   "couleur": "#B2AFA8"
+  },
+  {
+   "id": 34930097,
+   "url": "https://images.pexels.com/photos/34930097/pexels-photo-34930097.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "José Antonio Otegui Auzmendi",
+   "lienPhotographe": "https://www.pexels.com/@jose-antonio-otegui-auzmendi-2150489988",
+   "lienPexels": "https://www.pexels.com/photo/professional-esthetician-performing-facial-treatment-34930097/",
+   "couleur": "#514B3D"
+  },
+  {
+   "id": 7447152,
+   "url": "https://images.pexels.com/photos/7447152/pexels-photo-7447152.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "Gustavo Fring",
+   "lienPhotographe": "https://www.pexels.com/@gustavo-fring",
+   "lienPexels": "https://www.pexels.com/photo/photo-of-a-man-getting-a-haircut-7447152/",
+   "couleur": "#766E6B"
+  },
+  {
+   "id": 9146943,
+   "url": "https://images.pexels.com/photos/9146943/pexels-photo-9146943.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "Лена Gromakova",
+   "lienPhotographe": "https://www.pexels.com/@gromakova-92378617",
+   "lienPexels": "https://www.pexels.com/photo/interior-of-hairdresser-saloon-9146943/",
+   "couleur": "#6A5B48"
+  },
+  {
+   "id": 34930098,
+   "url": "https://images.pexels.com/photos/34930098/pexels-photo-34930098.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "José Antonio Otegui Auzmendi",
+   "lienPhotographe": "https://www.pexels.com/@jose-antonio-otegui-auzmendi-2150489988",
+   "lienPexels": "https://www.pexels.com/photo/professional-beautician-performing-facial-treatment-34930098/",
+   "couleur": "#707068"
+  },
+  {
+   "id": 18503633,
+   "url": "https://images.pexels.com/photos/18503633/pexels-photo-18503633.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+   "photographe": "Rahib Hamidov",
+   "lienPhotographe": "https://www.pexels.com/@hamidoffstudio",
+   "lienPexels": "https://www.pexels.com/photo/a-person-using-clippers-18503633/",
+   "couleur": "#372F2C"
   }
  ]
 }
