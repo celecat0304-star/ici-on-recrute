@@ -120,6 +120,7 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
   const [syncMessage, setSyncMessage] = useState("");
   const [photoHero, setPhotoHero] = useState(ville.photo_hero_url ?? "");
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  const [envoiFichier, setEnvoiFichier] = useState(false);
 
   const enregistrerPhotoHero = async () => {
     setEnvoiPhoto(true);
@@ -130,6 +131,40 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
     });
     setEnvoiPhoto(false);
     router.refresh();
+  };
+
+  const televerserPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fichier = e.target.files?.[0];
+    e.target.value = "";
+    if (!fichier) return;
+    setErreur("");
+    setEnvoiFichier(true);
+    try {
+      const image = await createImageBitmap(fichier);
+      const echelle = Math.min(1, 2000 / image.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * echelle);
+      canvas.height = Math.round(image.height * echelle);
+      canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const photoBase64 = canvas.toDataURL("image/jpeg", 0.85);
+
+      const res = await fetch(`/api/admin/villes/${ville.id}/photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoBase64 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setPhotoHero(data.url);
+        router.refresh();
+      } else {
+        setErreur(data.error ?? "Erreur pendant l'envoi de la photo.");
+      }
+    } catch {
+      setErreur("Impossible de lire cette image. Essayez un fichier JPG ou PNG.");
+    } finally {
+      setEnvoiFichier(false);
+    }
   };
 
   const synchroniser = async () => {
@@ -213,20 +248,39 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
         {ville.rayon_recherche_km} km
       </p>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={photoHero}
-          onChange={(e) => setPhotoHero(e.target.value)}
-          placeholder="URL photo de bannière du site public"
-          className="input flex-1 min-w-[200px]"
-        />
-        <button
-          onClick={enregistrerPhotoHero}
-          disabled={envoiPhoto}
-          className="min-h-[40px] px-4 rounded-lg border-2 border-vert text-vert font-bold text-sm"
-        >
-          Enregistrer
-        </button>
+      <div className="flex flex-col gap-2">
+        <p className="font-bold">Photo de la ville (bannière du site et de la borne)</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {photoHero && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoHero} alt="" className="w-32 h-20 object-cover rounded-lg" />
+          )}
+          <label className="min-h-[40px] px-4 rounded-lg bg-vert text-white font-bold text-sm inline-flex items-center cursor-pointer">
+            {envoiFichier ? "Envoi en cours..." : "Choisir une photo sur mon ordinateur"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={televerserPhoto}
+              disabled={envoiFichier}
+              className="sr-only"
+            />
+          </label>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={photoHero}
+            onChange={(e) => setPhotoHero(e.target.value)}
+            placeholder="ou coller l'adresse (URL) d'une photo"
+            className="input flex-1 min-w-[200px]"
+          />
+          <button
+            onClick={enregistrerPhotoHero}
+            disabled={envoiPhoto}
+            className="min-h-[40px] px-4 rounded-lg border-2 border-vert text-vert font-bold text-sm"
+          >
+            Enregistrer
+          </button>
+        </div>
       </div>
 
       {ville.code_insee && (
