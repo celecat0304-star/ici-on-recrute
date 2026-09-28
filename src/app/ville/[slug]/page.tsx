@@ -4,14 +4,9 @@ import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import VilleListe from "@/components/ville/VilleListe";
-import { imageIllustration, themeDeOffre } from "@/lib/imagesThemes";
+import { imageIllustration } from "@/lib/imagesThemes";
 import { Logo, LogoFranceTravail } from "@/components/borne/BorneComposants";
-import {
-  capitaliser,
-  champsAffichage,
-  initiales,
-  nettoyerLieu,
-} from "@/components/borne/borneUtils";
+import { capitaliser, champsAffichage, nettoyerLieu } from "@/components/borne/borneUtils";
 import {
   IconeMallette,
   IconePin,
@@ -44,14 +39,6 @@ export async function generateMetadata({
     title: `Offres d'emploi à ${capitaliser(ville.nom)} — Ici on recrute`,
     description: `Toutes les offres d'emploi locales à ${capitaliser(ville.nom)} : offres France Travail et offres des commerçants du coin.`,
   };
-}
-
-const TEINTES = ["#0F1A45", "#0E8A4A", "#2B3BE0", "#8A4200", "#7A2E6E", "#3B4152"];
-
-function teinte(texte: string) {
-  let h = 0;
-  for (let i = 0; i < texte.length; i++) h = (h * 31 + texte.charCodeAt(i)) >>> 0;
-  return TEINTES[h % TEINTES.length];
 }
 
 export default async function VillePage({
@@ -117,13 +104,11 @@ export default async function VillePage({
   const vedette = offreVedette ? champsAffichage(offreVedette) : null;
 
   const utilisePexels = (offresCommercants ?? []).some((o) => o.image_source === "pexels");
-  const nomVedette = vedette ? vedette.sousTitre || vedette.titre : "";
   const aPhotoVedette = Boolean(vedette?.imageUrl && !vedette.estLogo);
   const aLogoVedette = Boolean(vedette?.imageUrl && vedette.estLogo);
-  // Une photo d'illustration seulement quand le métier est reconnu ; sinon l'initiale de l'entreprise.
+  // Sans photo ni logo, une photo d'illustration du métier
   const illustrationVedette =
-    vedette && offreVedette && !aPhotoVedette && !aLogoVedette &&
-    themeDeOffre(vedette.titre, vedette.sousTitre) !== "general"
+    vedette && offreVedette && !aPhotoVedette && !aLogoVedette
       ? imageIllustration(vedette.titre, vedette.sousTitre, offreVedette.id)
       : null;
   const lieuVedette = vedette ? nettoyerLieu(vedette.lieu, departement) : null;
@@ -208,14 +193,7 @@ export default async function VillePage({
               ) : illustrationVedette ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={illustrationVedette.url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span
-                  className="font-title flex h-24 w-24 items-center justify-center rounded-[24px] text-5xl font-bold text-white"
-                  style={{ background: teinte(nomVedette) }}
-                >
-                  {initiales(nomVedette).charAt(0)}
-                </span>
-              )}
+              ) : null}
               <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#0F1A45] px-3 py-1.5 text-sm font-bold text-white">
                 <IconeEtoile className="h-3.5 w-3.5 text-[#0E8A4A]" />
                 OFFRE À LA UNE

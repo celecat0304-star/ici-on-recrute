@@ -15,10 +15,10 @@ import {
 import {
   champsAffichage,
   couleurContrat,
-  initiales,
   nettoyerLieu,
   tronquer,
 } from "@/components/borne/borneUtils";
+import { Vignette } from "@/components/borne/BorneComposants";
 
 type Filtre = "toutes" | "commerces" | "cdi" | "temps_partiel";
 
@@ -30,13 +30,6 @@ const FILTRES: { valeur: Filtre; libelle: string; Icone: typeof IconeGrille }[] 
 ];
 
 const PAGE = 20;
-const TEINTES = ["#0F1A45", "#0E8A4A", "#2B3BE0", "#8A4200", "#7A2E6E", "#3B4152"];
-
-function teinte(texte: string) {
-  let h = 0;
-  for (let i = 0; i < texte.length; i++) h = (h * 31 + texte.charCodeAt(i)) >>> 0;
-  return TEINTES[h % TEINTES.length];
-}
 
 export default function VilleListe({
   offres,
@@ -123,7 +116,6 @@ export default function VilleListe({
       <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 lg:grid-cols-2">
         {affichees.map((offre) => {
           const c = champsAffichage(offre);
-          const nomEntreprise = c.sousTitre || c.titre;
           const lieu = nettoyerLieu(c.lieu, departement);
           const contrat = [c.contratNom, c.contratDuree].filter(Boolean).join(" · ");
           return (
@@ -132,19 +124,14 @@ export default function VilleListe({
                 href={`/ville/${villeSlug}/offres/${offre.id}`}
                 className="flex min-h-[88px] items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_1px_0_#E4E0D6,0_6px_18px_rgba(15,26,69,0.05)] hover:-translate-y-0.5"
               >
-                {c.imageUrl && c.estLogo ? (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[#E4E0D6] bg-white">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.imageUrl} alt="" className="h-full w-full object-contain p-1" />
-                  </span>
-                ) : (
-                  <span
-                    className="font-title flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] text-xl font-bold text-white"
-                    style={{ background: teinte(nomEntreprise) }}
-                  >
-                    {initiales(nomEntreprise).charAt(0)}
-                  </span>
-                )}
+                <Vignette
+                  titre={c.titre}
+                  sousTitre={c.sousTitre}
+                  imageUrl={c.imageUrl}
+                  estLogo={c.estLogo}
+                  cle={offre.id}
+                  className="h-14 w-14 rounded-[14px]"
+                />
 
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-bold leading-snug">{tronquer(c.titre, 80)}</h2>
