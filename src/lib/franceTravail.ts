@@ -69,25 +69,41 @@ export async function fetchOffresPourVille(
 ): Promise<OffreApi[]> {
   const token = await getAccessToken();
 
-  const params = new URLSearchParams({
-    commune: codeInsee,
-    distance: String(distanceKm),
-    range: "0-149",
-  });
+  // L'API renvoie 150 offres au maximum par requête et n'accepte pas de dépasser
+  // la position 3149 : on lit donc les résultats page par page.
+  const TAILLE_PAGE = 150;
+  const POSITION_MAX = 3149;
+  const offres = new Map<string, OffreApi>();
 
-  const res = await fetch(`${SEARCH_URL}?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  for (let debut = 0; debut <= POSITION_MAX; debut += TAILLE_PAGE) {
+    const fin = Math.min(debut + TAILLE_PAGE - 1, POSITION_MAX);
+    const params = new URLSearchParams({
+      commune: codeInsee,
+      distance: String(distanceKm),
+      range: `${debut}-${fin}`,
+    });
 
-  if (res.status === 204) return [];
-  if (!res.ok && res.status !== 206) {
-    throw new Error(
-      `Recherche d'offres France Travail échouée (${res.status}) : ${await res.text()}`
-    );
+    const res = await fetch(`${SEARCH_URL}?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 204) break;
+    if (!res.ok && res.status !== 206) {
+      throw new Error(
+        `Recherche d'offres France Travail échouée (${res.status}) : ${await res.text()}`
+      );
+    }
+
+    const data = (await res.json()) as { resultats?: OffreApi[] };
+    const page = data.resultats ?? [];
+    for (const o of page) offres.set(o.id, o);
+
+    if (page.length < TAILLE_PAGE) break;
+    // l'API limite le nombre de requêtes par seconde
+    await new Promise((r) => setTimeout(r, 200));
   }
 
-  const data = (await res.json()) as { resultats?: OffreApi[] };
-  return data.resultats ?? [];
+  return [...offres.values()];
 }
 
 export async function synchroniserOffresVille(

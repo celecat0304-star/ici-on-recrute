@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { synchroniserOffresVille } from "@/lib/franceTravail";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const isProd = process.env.NODE_ENV === "production";

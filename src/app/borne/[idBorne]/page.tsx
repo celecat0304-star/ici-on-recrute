@@ -3,6 +3,10 @@ import { createPublicClient } from "@/lib/supabase/public";
 import BorneClient from "@/components/borne/BorneClient";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import type { OffreAffichee } from "@/lib/types";
+import { lireToutesLesLignes } from "@/lib/supabase/lireTout";
+import { tronquer } from "@/components/borne/borneUtils";
+
+const DESCRIPTION_MAX = 1200;
 
 export default async function BornePage({
   params,
@@ -26,15 +30,19 @@ export default async function BornePage({
     | null;
   const ville = Array.isArray(villeRelation) ? villeRelation[0] : villeRelation;
 
-  const [{ data: offresFranceTravail }, { data: offresCommercants }] =
-    await Promise.all([
+  const [offresFranceTravail, offresCommercants] = await Promise.all([
+    lireToutesLesLignes((debut, fin) =>
       supabase
         .from("offres_france_travail")
         .select(
           "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif"
         )
         .eq("ville_id", borne.ville_id)
-        .order("date_publication", { ascending: false }),
+        .order("date_publication", { ascending: false })
+        .order("id")
+        .range(debut, fin)
+    ),
+    lireToutesLesLignes((debut, fin) =>
       supabase
         .from("offres_commercants")
         .select(
@@ -43,14 +51,20 @@ export default async function BornePage({
         .eq("ville_id", borne.ville_id)
         .eq("statut", "publiee")
         .gte("date_expiration", new Date().toISOString().slice(0, 10))
-        .order("created_at", { ascending: false }),
-    ]);
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(debut, fin)
+    ),
+  ]);
 
-  const offresCommercantsAffichees: OffreAffichee[] = (offresCommercants ?? []).map(
-    (o): OffreAffichee => ({ source: "commercant", ...o })
+  // Descriptions raccourcies : avec des milliers d'offres, la page envoyée à la borne resterait trop lourde.
+  const abreger = (d: string | null) => (d ? tronquer(d, DESCRIPTION_MAX) : d);
+
+  const offresCommercantsAffichees: OffreAffichee[] = offresCommercants.map(
+    (o): OffreAffichee => ({ source: "commercant", ...o, description: abreger(o.description) })
   );
-  const offresFranceTravailAffichees: OffreAffichee[] = (offresFranceTravail ?? []).map(
-    (o): OffreAffichee => ({ source: "france_travail", ...o })
+  const offresFranceTravailAffichees: OffreAffichee[] = offresFranceTravail.map(
+    (o): OffreAffichee => ({ source: "france_travail", ...o, description: abreger(o.description) })
   );
 
   const offres: OffreAffichee[] = [
@@ -90,7 +104,7 @@ export default async function BornePage({
       offres={offres}
       caseA={caseA}
       caseB={caseB}
-      offresCommercantsCount={offresCommercants?.length ?? 0}
+      offresCommercantsCount={offresCommercants.length}
     />
   );
 }

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
+import { lireToutesLesLignes } from "@/lib/supabase/lireTout";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import VilleListe from "@/components/ville/VilleListe";
 import { imageIllustration } from "@/lib/imagesThemes";
@@ -57,15 +58,19 @@ export default async function VillePage({
 
   if (!ville) notFound();
 
-  const [{ data: offresFranceTravail }, { data: offresCommercants }] =
-    await Promise.all([
+  const [offresFranceTravail, offresCommercants] = await Promise.all([
+    lireToutesLesLignes((debut, fin) =>
       supabase
         .from("offres_france_travail")
         .select(
           "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif"
         )
         .eq("ville_id", ville.id)
-        .order("date_publication", { ascending: false }),
+        .order("date_publication", { ascending: false })
+        .order("id")
+        .range(debut, fin)
+    ),
+    lireToutesLesLignes((debut, fin) =>
       supabase
         .from("offres_commercants")
         .select(
@@ -74,13 +79,16 @@ export default async function VillePage({
         .eq("ville_id", ville.id)
         .eq("statut", "publiee")
         .gte("date_expiration", new Date().toISOString().slice(0, 10))
-        .order("created_at", { ascending: false }),
-    ]);
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(debut, fin)
+    ),
+  ]);
 
-  const offresCommercantsAffichees: OffreAffichee[] = (offresCommercants ?? []).map(
+  const offresCommercantsAffichees: OffreAffichee[] = offresCommercants.map(
     (o): OffreAffichee => ({ source: "commercant", ...o })
   );
-  const offresFranceTravailAffichees: OffreAffichee[] = (offresFranceTravail ?? []).map(
+  const offresFranceTravailAffichees: OffreAffichee[] = offresFranceTravail.map(
     (o): OffreAffichee => ({ source: "france_travail", ...o })
   );
 
@@ -103,7 +111,9 @@ export default async function VillePage({
   const offreVedette = entreprisesPayantes[0] ?? grandesEntreprisesFT[0] ?? offres[0];
   const vedette = offreVedette ? champsAffichage(offreVedette) : null;
 
-  const utilisePexels = (offresCommercants ?? []).some((o) => o.image_source === "pexels");
+  const utilisePexels = offresCommercants.some((o) => o.image_source === "pexels");
+  // La liste n'affiche pas les descriptions : inutile de les envoyer pour chaque offre.
+  const offresListe: OffreAffichee[] = offres.map((o) => ({ ...o, description: null }));
   const aPhotoVedette = Boolean(vedette?.imageUrl && !vedette.estLogo);
   const aLogoVedette = Boolean(vedette?.imageUrl && vedette.estLogo);
   // Sans photo ni logo, une photo d'illustration du métier
@@ -275,7 +285,7 @@ export default async function VillePage({
           </a>
         </div>
 
-        <VilleListe offres={offres} villeSlug={ville.slug} departement={departement} />
+        <VilleListe offres={offresListe} villeSlug={ville.slug} departement={departement} />
       </main>
 
       <footer className="border-t border-[#E4E0D6] bg-white">
