@@ -19,7 +19,7 @@ async function chargerOffre(villeId: string, id: string) {
   const { data: offreCommercant } = await supabase
     .from("offres_commercants")
     .select(
-      "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, email_contact, image_url, image_source, pexels_photographe"
+      "id, ville_id, nom_commerce, poste, type_contrat, temps_travail, horaires, quartier, description, comment_postuler, accepte_candidatures, image_url, image_source, pexels_photographe"
     )
     .eq("id", id)
     .eq("ville_id", villeId)
@@ -188,7 +188,7 @@ export default async function OffreDetailPage({
               <p className="font-bold mb-1 text-vert">Comment postuler ?</p>
               <p>{offre.comment_postuler}</p>
             </div>
-            {offre.email_contact && <CandidatureForm offreId={offre.id} />}
+            {offre.accepte_candidatures && <CandidatureForm offreId={offre.id} />}
           </>
         ) : (
           <a
