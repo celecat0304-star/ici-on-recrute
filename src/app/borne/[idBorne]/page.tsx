@@ -18,15 +18,15 @@ export default async function BornePage({
 
   const { data: borne } = await supabase
     .from("bornes")
-    .select("id, nom, lieu, ville_id, villes ( nom, slug, photo_hero_url, logo_url, rayon_recherche_km )")
+    .select("id, nom, lieu, ville_id, villes ( nom, slug, photo_hero_url, logo_url, rayon_recherche_km, latitude, longitude )")
     .eq("id", idBorne)
     .single();
 
   if (!borne) notFound();
 
   const villeRelation = borne.villes as unknown as
-    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null; rayon_recherche_km: number | null }
-    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null; rayon_recherche_km: number | null }[]
+    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null; rayon_recherche_km: number | null; latitude: number | null; longitude: number | null }
+    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null; rayon_recherche_km: number | null; latitude: number | null; longitude: number | null }[]
     | null;
   const ville = Array.isArray(villeRelation) ? villeRelation[0] : villeRelation;
 
@@ -35,7 +35,7 @@ export default async function BornePage({
       supabase
         .from("offres_france_travail")
         .select(
-          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif"
+          "id, id_france_travail, ville_id, intitule, description, entreprise_nom, entreprise_logo_url, type_contrat, duree_travail, lieu_travail, url_origine, date_publication, date_maj, tranche_effectif, latitude, longitude, salaire_mensuel_min, salaire_mensuel_max"
         )
         .eq("ville_id", borne.ville_id)
         .order("date_publication", { ascending: false })
@@ -101,6 +101,11 @@ export default async function BornePage({
       villePhotoUrl={ville?.photo_hero_url ?? null}
       villeLogoUrl={ville?.logo_url ?? null}
       rayonKm={ville?.rayon_recherche_km ?? 10}
+      centreVille={
+        ville?.latitude != null && ville?.longitude != null
+          ? { latitude: ville.latitude, longitude: ville.longitude }
+          : null
+      }
       offres={offres}
       caseA={caseA}
       caseB={caseB}

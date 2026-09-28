@@ -367,11 +367,13 @@ export function Clavier({
   onChange,
   mode,
   onFermer,
+  chiffres = false,
 }: {
   valeur: string;
   onChange: (v: string) => void;
   mode: "email" | "texte";
   onFermer?: () => void;
+  chiffres?: boolean;
 }) {
   const touche = (
     label: string,
@@ -409,6 +411,7 @@ export function Clavier({
           ],
         ]
       : [
+          ...(chiffres ? [lettres("1234567890")] : []),
           lettres("azertyuiop"),
           lettres("qsdfghjklm"),
           [...lettres("wxcvbn"), touche("'"), touche("-"), effacer],

@@ -1,10 +1,14 @@
 import type { OffreAffichee } from "@/lib/types";
 
+import { themeDeOffre } from "@/lib/imagesThemes";
+
 export type Filtres = {
   texte: string;
   secteur: string | null;
   contrats: string[];
   commercantsSeul: boolean;
+  distanceKm: number | null;
+  salaireMin: number | null;
 };
 
 export const FILTRES_VIDES: Filtres = {
@@ -12,7 +16,36 @@ export const FILTRES_VIDES: Filtres = {
   secteur: null,
   contrats: [],
   commercantsSeul: false,
+  distanceKm: null,
+  salaireMin: null,
 };
+
+export type Domicile = { nom: string; latitude: number; longitude: number };
+export type Contexte = { domicile: Domicile | null; centreVille: { latitude: number; longitude: number } | null };
+
+export const DISTANCES_KM = [5, 10, 20, 50];
+export const SALAIRES_MIN = [1500, 1800, 2000, 2500];
+
+// Distance à vol d'oiseau en km (formule de haversine)
+export function distanceEntre(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLon = rad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
+export function formaterEuros(n: number) {
+  return `${n.toLocaleString("fr-FR").replace(/ | /g, " ")} €`;
+}
+
+export function salaireAffiche(min: number | null, max: number | null) {
+  if (min == null) return null;
+  if (max == null || max <= min) return `${formaterEuros(min)} / mois`;
+  return `${formaterEuros(min)} à ${formaterEuros(max)} / mois`;
+}
 
 export const CONTRATS = ["CDI", "CDD", "Intérim", "Alternance", "Saisonnier"];
 
@@ -24,15 +57,22 @@ const MOTS_CONTRAT: Record<string, string[]> = {
   Saisonnier: ["saison"],
 };
 
-// Les secteurs sont déduits des mots du titre : l'offre n'a pas de champ « secteur ».
-export const SECTEURS: { id: string; libelle: string; mots: string[] }[] = [
-  { id: "commerce", libelle: "Commerce", mots: ["vend", "vente", "caiss", "magasin", "commercial", "boulang", "rayon", "fruits"] },
-  { id: "administration", libelle: "Administration", mots: ["administratif", "secrétaire", "comptab", "gestionnaire", "assistant", "accueil", "paie"] },
-  { id: "industrie", libelle: "Industrie", mots: ["production", "fabrication", "opérateur", "mécanicien", "électricien", "technicien", "maintenance", "soudeur", "usine"] },
-  { id: "logistique", libelle: "Logistique", mots: ["logisti", "livreur", "chauffeur", "cariste", "magasinier", "préparateur de commandes", "manutention", "conducteur"] },
-  { id: "sante", libelle: "Santé", mots: ["santé", "infirm", "soignant", "médical", "puéricult", "aide à domicile", "auxiliaire de vie", "assistant de vie", "éducat", "social"] },
-  { id: "restauration", libelle: "Restauration", mots: ["cuisin", "serveu", "restaura", "commis", "barman", "plongeur", "traiteur"] },
-  { id: "batiment", libelle: "Bâtiment", mots: ["bâtiment", "maçon", "peintre", "menuisier", "plaquiste", "couvreur", "chantier", "carreleur"] },
+// Les domaines sont déduits du titre de l'offre (les mêmes que pour les photos d'illustration).
+export const SECTEURS: { id: string; libelle: string }[] = [
+  { id: "commerce", libelle: "Commerce" },
+  { id: "restauration", libelle: "Restauration" },
+  { id: "sante", libelle: "Santé" },
+  { id: "logistique", libelle: "Logistique" },
+  { id: "industrie", libelle: "Industrie" },
+  { id: "batiment", libelle: "Bâtiment" },
+  { id: "administration", libelle: "Administration" },
+  { id: "enfance", libelle: "Enfance et éducation" },
+  { id: "beaute", libelle: "Beauté" },
+  { id: "proprete", libelle: "Propreté" },
+  { id: "hotellerie", libelle: "Hôtellerie" },
+  { id: "securite", libelle: "Sécurité" },
+  { id: "informatique", libelle: "Informatique" },
+  { id: "espacesverts", libelle: "Espaces verts" },
 ];
 
 const PALETTE_AVATAR = ["#0F1A45", "#8A4200", "#1A249E", "#0E8A4A", "#3B4152", "#7A2E6E"];
@@ -143,6 +183,10 @@ export function champsAffichage(offre: OffreAffichee) {
       estLogo: false,
       creditPexels: offre.image_source === "pexels" ? offre.pexels_photographe : null,
       estCommercant: true,
+      latitude: null as number | null,
+      longitude: null as number | null,
+      salaireMin: null as number | null,
+      salaireMax: null as number | null,
     };
   }
   return {
@@ -162,7 +206,22 @@ export function champsAffichage(offre: OffreAffichee) {
     estLogo: true,
     creditPexels: null as string | null,
     estCommercant: false,
+    latitude: offre.latitude ?? null,
+    longitude: offre.longitude ?? null,
+    salaireMin: offre.salaire_mensuel_min ?? null,
+    salaireMax: offre.salaire_mensuel_max ?? null,
   };
+}
+
+// Distance en km entre le domicile du candidat et l'offre (les offres de commerçants sont situées au centre de la ville).
+export function distanceOffre(offre: OffreAffichee, ctx: Contexte): number | null {
+  if (!ctx.domicile) return null;
+  const c = champsAffichage(offre);
+  const point =
+    c.latitude != null && c.longitude != null
+      ? { latitude: c.latitude, longitude: c.longitude }
+      : ctx.centreVille;
+  return point ? distanceEntre(ctx.domicile, point) : null;
 }
 
 export function estNouvelle(offre: OffreAffichee) {
@@ -171,9 +230,17 @@ export function estNouvelle(offre: OffreAffichee) {
   return j !== null && j <= 7;
 }
 
-export function correspond(offre: OffreAffichee, f: Filtres) {
+export function correspond(offre: OffreAffichee, f: Filtres, ctx: Contexte) {
   const c = champsAffichage(offre);
   if (f.commercantsSeul && !c.estCommercant) return false;
+
+  if (f.distanceKm != null && ctx.domicile) {
+    const d = distanceOffre(offre, ctx);
+    if (d === null || d > f.distanceKm) return false;
+  }
+
+  // Une offre sans salaire indiqué ne peut pas répondre à un salaire minimum
+  if (f.salaireMin != null && (c.salaireMax ?? c.salaireMin ?? 0) < f.salaireMin) return false;
 
   if (f.contrats.length > 0) {
     const contrat = (c.contrat ?? "").toLowerCase();
@@ -185,10 +252,7 @@ export function correspond(offre: OffreAffichee, f: Filtres) {
 
   const texteOffre = `${c.titre} ${c.sousTitre ?? ""}`.toLowerCase();
 
-  if (f.secteur) {
-    const secteur = SECTEURS.find((s) => s.id === f.secteur);
-    if (secteur && !secteur.mots.some((mot) => texteOffre.includes(mot))) return false;
-  }
+  if (f.secteur && themeDeOffre(c.titre, c.sousTitre) !== f.secteur) return false;
 
   const recherche = f.texte.trim().toLowerCase();
   if (recherche && !texteOffre.includes(recherche)) return false;

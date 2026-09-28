@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import { IconeDocument, IconeChevron } from "@/components/icones/Icones";
+import CandidatureCommune from "@/components/ville/CandidatureCommune";
+import { Logo } from "@/components/borne/BorneComposants";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +46,9 @@ export default async function PanierPage({
       idsCommercant.length > 0
         ? supabase
             .from("offres_commercants")
-            .select("id, nom_commerce, poste, type_contrat, comment_postuler")
+            .select("id, nom_commerce, poste, type_contrat, comment_postuler, accepte_candidatures")
             .in("id", idsCommercant)
-        : Promise.resolve({ data: [] as { id: string; nom_commerce: string; poste: string; type_contrat: string; comment_postuler: string }[] }),
+        : Promise.resolve({ data: [] as { id: string; nom_commerce: string; poste: string; type_contrat: string; comment_postuler: string; accepte_candidatures: boolean }[] }),
       idsFranceTravail.length > 0
         ? supabase
             .from("offres_france_travail")
@@ -56,15 +58,12 @@ export default async function PanierPage({
     ]);
 
   const total = (offresCommercants ?? []).length + (offresFranceTravail ?? []).length;
+  const offresCandidatureCommune = (offresCommercants ?? []).filter((o) => o.accepte_candidatures);
 
   return (
-    <div className="min-h-screen bg-fond text-texte flex flex-col">
+    <div className="min-h-screen bg-[#F7F5F0] text-[#0F1A45] flex flex-col">
       <header className="px-6 py-5">
-        <p className="font-title text-lg font-black leading-none">
-          ICI <span className="text-vert">✌</span>
-          <br />
-          ON RECRUTE
-        </p>
+        <Logo taille={22} />
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 pb-16 flex flex-col gap-6">
@@ -72,6 +71,17 @@ export default async function PanierPage({
           <h1 className="font-title text-3xl font-bold">Vos offres sélectionnées</h1>
           {ville && <p className="opacity-70 mt-1">à {ville.nom} · {total} offre{total > 1 ? "s" : ""}</p>}
         </div>
+
+        {offresCandidatureCommune.length > 0 && (
+          <CandidatureCommune
+            panierId={id}
+            offres={offresCandidatureCommune.map((o) => ({
+              id: o.id,
+              poste: o.poste,
+              nom_commerce: o.nom_commerce,
+            }))}
+          />
+        )}
 
         <div className="flex flex-col gap-4">
           {(offresCommercants ?? []).map((o) => (

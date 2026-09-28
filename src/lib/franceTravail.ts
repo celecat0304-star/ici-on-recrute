@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { salaireMensuel } from "@/lib/salaire";
 
 const TOKEN_URL =
   "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=%2Fpartenaire";
@@ -15,10 +16,63 @@ type OffreApi = {
   typeContratLibelle?: string;
   dureeTravailLibelle?: string;
   dureeTravailLibelleConverti?: string;
-  lieuTravail?: { libelle?: string };
+  lieuTravail?: { libelle?: string; latitude?: number; longitude?: number };
   origineOffre?: { urlOrigine?: string };
   trancheEffectifEtab?: string;
+  salaire?: { libelle?: string };
 };
+
+// « 51 - REIMS » -> { departement: "51", nom: "REIMS" }
+function analyserLieu(libelle: string | undefined) {
+  const m = libelle?.match(/^\s*(\d{2,3})\s*-\s*(.+?)\s*$/);
+  return m ? { departement: m[1], nom: m[2] } : null;
+}
+
+function cleCommune(libelle: string | undefined) {
+  const l = analyserLieu(libelle);
+  return l ? `${l.departement}|${l.nom.toLowerCase()}` : "";
+}
+
+// Centre des communes citées dans les offres : [latitude, longitude], via l'API officielle des communes.
+async function centresDesCommunes(libelles: (string | undefined)[]) {
+  const uniques = new Map<string, { departement: string; nom: string }>();
+  for (const l of libelles) {
+    const lieu = analyserLieu(l);
+    if (lieu) uniques.set(cleCommune(l), lieu);
+  }
+  const resultat = new Map<string, [number, number]>();
+  const aFaire = [...uniques.entries()];
+  const travailler = async () => {
+    for (let item = aFaire.pop(); item; item = aFaire.pop()) {
+      const [cle, lieu] = item;
+      try {
+        const res = await fetch(
+          `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(lieu.nom)}&codeDepartement=${lieu.departement}&fields=centre&boost=population&limit=1`
+        );
+        if (!res.ok) continue;
+        const communes = (await res.json()) as { centre?: { coordinates?: [number, number] } }[];
+        const coord = communes[0]?.centre?.coordinates;
+        if (coord) resultat.set(cle, [coord[1], coord[0]]);
+      } catch {
+        // commune introuvable : l'offre restera sans position
+      }
+    }
+  };
+  await Promise.all([travailler(), travailler(), travailler(), travailler()]);
+  return resultat;
+}
+
+// Centre de la commune (sert au calcul de distance des offres de commerçants)
+async function completerCentreVille(supabase: SupabaseClient, villeId: string, codeInsee: string) {
+  const { data } = await supabase.from("villes").select("latitude").eq("id", villeId).single();
+  if (data?.latitude != null) return;
+  const res = await fetch(`https://geo.api.gouv.fr/communes/${codeInsee}?fields=centre`);
+  if (!res.ok) return;
+  const commune = (await res.json()) as { centre?: { coordinates?: [number, number] } };
+  const coord = commune.centre?.coordinates;
+  if (!coord) return;
+  await supabase.from("villes").update({ longitude: coord[0], latitude: coord[1] }).eq("id", villeId);
+}
 
 // La tranche officielle la plus proche du seuil de 30 salariés est "20 à 49 salariés" :
 // on considère tout ce qui est en dessous (ou inconnu) comme une petite structure.
@@ -119,7 +173,21 @@ export async function synchroniserOffresVille(
     ville.rayon_recherche_km ?? 10
   );
 
-  const lignes = offres.map((o) => ({
+  await completerCentreVille(supabase, ville.id, ville.code_insee);
+
+  // Beaucoup d'offres n'ont pas de position précise : on prend le centre de leur commune.
+  const communes = await centresDesCommunes(
+    offres.filter((o) => o.lieuTravail?.latitude == null).map((o) => o.lieuTravail?.libelle)
+  );
+
+  const lignes = offres.map((o) => {
+    const salaire = salaireMensuel(o.salaire?.libelle);
+    return {
+    latitude: o.lieuTravail?.latitude ?? communes.get(cleCommune(o.lieuTravail?.libelle))?.[0] ?? null,
+    longitude: o.lieuTravail?.longitude ?? communes.get(cleCommune(o.lieuTravail?.libelle))?.[1] ?? null,
+    salaire_libelle: o.salaire?.libelle ?? null,
+    salaire_mensuel_min: salaire?.min ?? null,
+    salaire_mensuel_max: salaire?.max ?? null,
     id_france_travail: o.id,
     ville_id: ville.id,
     intitule: o.intitule,
@@ -135,7 +203,8 @@ export async function synchroniserOffresVille(
     date_publication: o.dateCreation ?? null,
     date_maj: new Date().toISOString(),
     tranche_effectif: o.trancheEffectifEtab ?? null,
-  }));
+    };
+  });
 
   if (lignes.length > 0) {
     const { error } = await supabase

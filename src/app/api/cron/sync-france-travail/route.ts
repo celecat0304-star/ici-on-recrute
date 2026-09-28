@@ -39,5 +39,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Les données des candidats ne sont pas conservées plus de 30 jours
+  const limite = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("candidatures_communes").delete().lt("created_at", limite);
+
   return NextResponse.json({ ok: true, total, villes: resultats });
 }

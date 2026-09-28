@@ -17,6 +17,13 @@ import {
   couleurAvatar,
   couleurContrat,
   estNouvelle,
+  DISTANCES_KM,
+  SALAIRES_MIN,
+  distanceOffre,
+  formaterEuros,
+  nettoyerLieu,
+  salaireAffiche,
+  type Domicile,
   initiales,
   joursDepuis,
   masquerEmail,
@@ -43,6 +50,7 @@ type Props = {
   villePhotoUrl?: string | null;
   villeLogoUrl?: string | null;
   rayonKm?: number;
+  centreVille?: { latitude: number; longitude: number } | null;
   offres: OffreAffichee[];
   caseA: OffreAffichee[];
   caseB: OffreAffichee[];
@@ -68,6 +76,7 @@ export default function BorneClient({
   villePhotoUrl = null,
   villeLogoUrl = null,
   rayonKm = 10,
+  centreVille = null,
   offres,
   caseA,
   caseB,
@@ -77,6 +86,13 @@ export default function BorneClient({
   const [indexAttente, setIndexAttente] = useState(0);
   const [filtres, setFiltres] = useState<Filtres>(FILTRES_VIDES);
   const [clavierOuvert, setClavierOuvert] = useState(false);
+  const [domicile, setDomicile] = useState<Domicile | null>(null);
+  const [clavierCommune, setClavierCommune] = useState(false);
+  const [saisieCommune, setSaisieCommune] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    { nom: string; codePostal: string; latitude: number; longitude: number }[]
+  >([]);
+  const [rechercheCommuneEnCours, setRechercheCommuneEnCours] = useState(false);
   const [nbVisibles, setNbVisibles] = useState(PAGE);
   const [indexDetail, setIndexDetail] = useState(0);
   const [selection, setSelection] = useState<ElementSelection[]>([]);
@@ -103,9 +119,19 @@ export default function BorneClient({
 
   const villeAffichee = capitaliser(villeNom);
 
+  const ctx = useMemo(() => ({ domicile, centreVille }), [domicile, centreVille]);
+
   const offresFiltrees = useMemo(
-    () => offres.filter((o) => correspond(o, filtres)),
-    [offres, filtres]
+    () => {
+      const liste = offres.filter((o) => correspond(o, filtres, ctx));
+      // Avec un domicile renseigné, les offres les plus proches passent en premier
+      if (!ctx.domicile) return liste;
+      return liste
+        .map((o) => ({ o, d: distanceOffre(o, ctx) ?? Infinity }))
+        .sort((a, b) => a.d - b.d)
+        .map((x) => x.o);
+    },
+    [offres, filtres, ctx]
   );
   const offreCourante = mode === "offre" ? offresFiltrees[indexDetail] : undefined;
   const infos = offreCourante ? champsAffichage(offreCourante) : null;
@@ -196,7 +222,57 @@ export default function BorneClient({
   }, [mode, offres.length]);
 
 
+  // Recherche de la commune du candidat (API officielle des communes, sans clé)
+  useEffect(() => {
+    const q = saisieCommune.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setRechercheCommuneEnCours(false);
+      return;
+    }
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      setRechercheCommuneEnCours(true);
+      try {
+        const critere = /^\d{5}$/.test(q) ? `codePostal=${q}` : `nom=${encodeURIComponent(q)}`;
+        const res = await fetch(
+          `https://geo.api.gouv.fr/communes?${critere}&fields=nom,centre,codesPostaux&boost=population&limit=5`
+        );
+        const data = res.ok
+          ? ((await res.json()) as {
+              nom: string;
+              codesPostaux?: string[];
+              centre?: { coordinates: [number, number] };
+            }[])
+          : [];
+        if (annule) return;
+        setSuggestions(
+          data
+            .filter((c) => c.centre?.coordinates)
+            .map((c) => ({
+              nom: c.nom,
+              codePostal: c.codesPostaux?.[0] ?? "",
+              latitude: c.centre!.coordinates[1],
+              longitude: c.centre!.coordinates[0],
+            }))
+        );
+      } catch {
+        if (!annule) setSuggestions([]);
+      } finally {
+        if (!annule) setRechercheCommuneEnCours(false);
+      }
+    }, 300);
+    return () => {
+      annule = true;
+      clearTimeout(minuteur);
+    };
+  }, [saisieCommune]);
+
   const revenirAAttente = () => {
+    setDomicile(null);
+    setSaisieCommune("");
+    setSuggestions([]);
+    setClavierCommune(false);
     setMode("accueil");
     setIndexDetail(0);
     setSelection([]);
@@ -771,7 +847,10 @@ export default function BorneClient({
             >
               <Ic n="loupe" s={38} className="text-[#2B3BE0]" />
               <button
-                onClick={() => setClavierOuvert(true)}
+                onClick={() => {
+                  setClavierOuvert(true);
+                  setClavierCommune(false);
+                }}
                 aria-label="Saisir un métier"
                 className="grow truncate text-[34px] font-bold"
               >
@@ -795,6 +874,7 @@ export default function BorneClient({
                 onFermer={() => setClavierOuvert(false)}
               />
             )}
+            <h2 className="mt-3 text-[32px] font-bold">Domaine</h2>
             <div className="flex flex-wrap gap-3">
               {SECTEURS.map((s) => {
                 const actif = filtres.secteur === s.id;
@@ -810,6 +890,158 @@ export default function BorneClient({
                   >
                     {actif && <Ic n="coche" s={28} sw={3} />}
                     {s.libelle}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <h2 className="text-[32px] font-bold">Où habitez-vous ?</h2>
+            {domicile ? (
+              <div className="bc-carte flex h-[108px] items-center gap-[18px] rounded-[28px] pl-[30px] pr-3.5">
+                <Ic n="pin" s={38} className="text-[#0E8A4A]" />
+                <span className="grow truncate text-[34px] font-bold">{domicile.nom}</span>
+                <button
+                  onClick={() => {
+                    setDomicile(null);
+                    majFiltres({ distanceKm: null });
+                  }}
+                  aria-label="Changer de commune"
+                  className="flex h-20 items-center gap-2 rounded-full bg-[#F1EEE6] px-6 text-[24px] font-bold"
+                >
+                  <Ic n="croix" s={26} sw={2.4} />
+                  Changer
+                </button>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="flex h-[108px] items-center gap-[18px] rounded-[28px] bg-white pl-[30px] pr-3.5"
+                  style={{ boxShadow: clavierCommune ? "inset 0 0 0 3px #2B3BE0, 0 0 0 8px #E9EBFD" : "inset 0 0 0 2px #E4E0D6" }}
+                >
+                  <Ic n="pin" s={38} className="text-[#2B3BE0]" />
+                  <button
+                    onClick={() => {
+                      setClavierCommune(true);
+                      setClavierOuvert(false);
+                    }}
+                    aria-label="Saisir votre commune"
+                    className="grow truncate text-[34px] font-bold"
+                  >
+                    {saisieCommune || <span className="font-normal text-[#8A867B]">Votre commune ou code postal</span>}
+                  </button>
+                  {saisieCommune && (
+                    <button
+                      onClick={() => setSaisieCommune("")}
+                      aria-label="Effacer"
+                      className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F1EEE6]"
+                    >
+                      <Ic n="croix" s={30} sw={2.4} />
+                    </button>
+                  )}
+                </div>
+                {suggestions.length > 0 && (
+                  <div className="flex flex-col gap-2.5">
+                    {suggestions.map((s) => (
+                      <button
+                        key={`${s.nom}-${s.codePostal}`}
+                        onClick={() => {
+                          setDomicile({ nom: s.nom, latitude: s.latitude, longitude: s.longitude });
+                          setSaisieCommune("");
+                          setSuggestions([]);
+                          setClavierCommune(false);
+                          majFiltres({ distanceKm: filtres.distanceKm ?? 10 });
+                        }}
+                        className="bc-carte flex h-[84px] items-center gap-4 rounded-[22px] px-6 text-[30px] font-bold"
+                      >
+                        <Ic n="pin" s={30} className="text-[#0E8A4A]" />
+                        {s.nom}
+                        <span className="font-normal text-[#545A6B]">{s.codePostal}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {saisieCommune.trim().length >= 2 && suggestions.length === 0 && !rechercheCommuneEnCours && (
+                  <p className="text-[24px] text-[#545A6B]">Aucune commune trouvée.</p>
+                )}
+                {clavierCommune && (
+                  <Clavier
+                    mode="texte"
+                    chiffres
+                    valeur={saisieCommune}
+                    onChange={setSaisieCommune}
+                    onFermer={() => setClavierCommune(false)}
+                  />
+                )}
+                <p className="text-[22px] text-[#545A6B]">
+                  Indiquez votre commune pour voir d’abord les offres les plus proches de chez vous.
+                </p>
+              </>
+            )}
+            {domicile && (
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => majFiltres({ distanceKm: null })}
+                  aria-pressed={filtres.distanceKm === null}
+                  className={
+                    "flex h-[84px] items-center rounded-[22px] px-7 text-[26px] font-bold " +
+                    (filtres.distanceKm === null ? "bg-[#2B3BE0] text-white" : "bc-anneau bg-white")
+                  }
+                >
+                  Peu importe
+                </button>
+                {DISTANCES_KM.map((km) => {
+                  const actif = filtres.distanceKm === km;
+                  return (
+                    <button
+                      key={km}
+                      onClick={() => majFiltres({ distanceKm: km })}
+                      aria-pressed={actif}
+                      className={
+                        "flex h-[84px] items-center gap-3 rounded-[22px] px-7 text-[26px] font-bold " +
+                        (actif ? "bg-[#2B3BE0] text-white" : "bc-anneau bg-white")
+                      }
+                    >
+                      {actif && <Ic n="coche" s={28} sw={3} />}
+                      Moins de {km} km
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-[32px] font-bold">Salaire minimum</h2>
+              <span className="text-[22px] text-[#545A6B]">Brut par mois, si l’offre l’indique</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => majFiltres({ salaireMin: null })}
+                aria-pressed={filtres.salaireMin === null}
+                className={
+                  "flex h-[84px] items-center rounded-[22px] px-7 text-[26px] font-bold " +
+                  (filtres.salaireMin === null ? "bg-[#2B3BE0] text-white" : "bc-anneau bg-white")
+                }
+              >
+                Peu importe
+              </button>
+              {SALAIRES_MIN.map((s) => {
+                const actif = filtres.salaireMin === s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => majFiltres({ salaireMin: s })}
+                    aria-pressed={actif}
+                    className={
+                      "flex h-[84px] items-center gap-3 rounded-[22px] px-7 text-[26px] font-bold " +
+                      (actif ? "bg-[#2B3BE0] text-white" : "bc-anneau bg-white")
+                    }
+                  >
+                    {actif && <Ic n="coche" s={28} sw={3} />}
+                    {formaterEuros(s)} et +
                   </button>
                 );
               })}
@@ -880,6 +1112,8 @@ export default function BorneClient({
           <button
             onClick={() => {
               setFiltres(FILTRES_VIDES);
+              setDomicile(null);
+              setSaisieCommune("");
               setNbVisibles(PAGE);
             }}
             className="flex h-[132px] w-[260px] shrink-0 items-center justify-center rounded-full bg-white text-[28px] font-bold shadow-[inset_0_0_0_2px_#0F1A45]"
@@ -911,6 +1145,8 @@ export default function BorneClient({
       filtres.secteur && SECTEURS.find((s) => s.id === filtres.secteur)?.libelle,
       ...filtres.contrats,
       filtres.commercantsSeul && "Commerçants du coin",
+      domicile && filtres.distanceKm != null && `Moins de ${filtres.distanceKm} km de ${domicile.nom}`,
+      filtres.salaireMin != null && `${formaterEuros(filtres.salaireMin)} et +`,
     ].filter(Boolean) as string[];
 
     ecran = (
@@ -1014,10 +1250,18 @@ export default function BorneClient({
                           {c.lieu && (
                             <span className="flex min-w-0 items-center gap-1">
                               <Ic n="pin" s={22} sw={2} />
-                              <span className="truncate">{c.lieu}</span>
+                              <span className="truncate">
+                                {nettoyerLieu(c.lieu)}
+                                {distanceOffre(o, ctx) !== null && ` · ${Math.max(1, Math.round(distanceOffre(o, ctx)!))} km`}
+                              </span>
                             </span>
                           )}
                         </span>
+                        {salaireAffiche(c.salaireMin, c.salaireMax) && (
+                          <span className="text-[22px] font-bold text-[#0A5C39]">
+                            {salaireAffiche(c.salaireMin, c.salaireMax)}
+                          </span>
+                        )}
                       </span>
                       <Ic n="chevron" s={36} sw={2.4} className="shrink-0 text-[#9A968A]" />
                     </button>

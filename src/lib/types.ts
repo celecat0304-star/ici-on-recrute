@@ -13,6 +13,11 @@ export type OffreFranceTravail = {
   date_publication: string | null;
   date_maj: string;
   tranche_effectif: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  salaire_libelle?: string | null;
+  salaire_mensuel_min?: number | null;
+  salaire_mensuel_max?: number | null;
 };
 
 export type OffreCommercantPublique = {
