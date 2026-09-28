@@ -91,7 +91,8 @@ export function nettoyerTitre(titre: string) {
     t = t.charAt(0).toUpperCase() + t.slice(1);
     t = t.replace(/(\s[-–/:]\s)(\p{L})/gu, (_, sep: string, l: string) => sep + l.toUpperCase());
   }
-  return avaitHF ? `${t} (H/F)` : t;
+  // espace insécable : « (H/F) » ne reste jamais seul sur une ligne
+  return avaitHF ? `${t} (H/F)` : t;
 }
 
 // Coupe sur un mot entier, jamais au milieu d'un mot.

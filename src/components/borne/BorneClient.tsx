@@ -412,7 +412,7 @@ export default function BorneClient({
     const employeurs = caseB.length > 0 ? caseA.slice(0, 18) : [];
     const actif = vedettes.length > 0 ? indexAttente % vedettes.length : 0;
     const ligneVille = `${rayonKm} km de ${villeAffichee}`;
-    const taillePitch = Math.min(120, Math.floor(900 / (Math.max(10, ligneVille.length) * 0.47)));
+    const taillePitch = Math.min(118, Math.floor(900 / (Math.max(10, ligneVille.length) * 0.47)));
 
     let colonnes: OffreAffichee[][] = [];
     for (let k = 0; k < employeurs.length; k += 3) colonnes.push(employeurs.slice(k, k + 3));
@@ -450,19 +450,19 @@ export default function BorneClient({
                 "linear-gradient(180deg, rgba(247,245,240,0) 0%, rgba(247,245,240,0.85) 60%, #F7F5F0 100%)",
             }}
           />
-          <header className="absolute left-14 top-9">
+          <header className="absolute left-14" style={{ top: 28 }}>
             <Logo taille={40} />
           </header>
           <span
             className="absolute left-14 flex items-center gap-3 rounded-full bg-[#0E8A4A] pl-4 pr-6 font-bold text-white"
-            style={{ top: 122, height: 56, fontSize: 26 }}
+            style={{ top: 128, height: 56, fontSize: 26 }}
           >
             <Ic n="horloge" s={30} sw={2.4} />
             2 minutes chrono
           </span>
           <h1
             className="absolute left-14 font-bold text-[#0F1A45]"
-            style={{ top: 190, fontSize: taillePitch, lineHeight: 0.95, letterSpacing: "-0.04em" }}
+            style={{ top: 204, fontSize: taillePitch, lineHeight: 0.95, letterSpacing: "-0.04em" }}
           >
             Un emploi
             <br />à moins de
@@ -494,18 +494,18 @@ export default function BorneClient({
                         pointerEvents: visible ? "auto" : "none",
                       }}
                     >
-                      <div className="relative shrink-0 bg-white" style={{ width: 440, height: 340 }}>
+                      <div className="relative shrink-0" style={{ width: 440, height: 340, background: "#F1F4F9" }}>
                         {c.imageUrl && !c.estLogo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={c.imageUrl} alt={c.imageAlt} className="h-full w-full object-cover" />
                         ) : c.imageUrl ? (
-                          <div className="flex h-full w-full items-center justify-center bg-white">
+                          <div className="flex h-full w-full items-center justify-center" style={{ background: "#F1F4F9" }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={c.imageUrl}
                               alt={c.imageAlt}
                               className="object-contain"
-                              style={{ maxWidth: "70%", maxHeight: "70%" }}
+                              style={{ width: "75%", maxHeight: "80%" }}
                             />
                           </div>
                         ) : (
@@ -526,9 +526,9 @@ export default function BorneClient({
                         </span>
                         <p
                           className="d line-clamp-2 shrink-0 font-bold"
-                          style={{ fontSize: 44, lineHeight: 1.08, letterSpacing: "-0.02em" }}
+                          style={{ fontSize: 52, lineHeight: 1.06, letterSpacing: "-0.02em" }}
                         >
-                          {tronquer(c.titre, 46)}
+                          {tronquer(c.titre, 36)}
                         </p>
                         <div className="flex shrink-0 items-center gap-[22px] whitespace-nowrap text-[22px] text-[#3B4152]">
                           {c.lieu && (
@@ -550,7 +550,7 @@ export default function BorneClient({
                             </span>
                           )}
                         </div>
-                        {c.description && c.titre.length <= 28 && (
+                        {c.description && c.titre.length <= 20 && (
                           <p className="line-clamp-2 shrink-0 text-[23px] text-[#262B3A]" style={{ lineHeight: 1.4 }}>
                             {c.description}
                           </p>
@@ -600,12 +600,12 @@ export default function BorneClient({
                 {compteur}
               </span>
               <div className="flex flex-col gap-1.5">
-                <span className="d font-bold" style={{ fontSize: 36, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
+                <span className="d font-bold" style={{ fontSize: 34, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
                   offres disponibles
                   <br />
                   aujourd’hui
                 </span>
-                <span className="flex items-center gap-2.5 font-semibold text-[#0A5C39]" style={{ fontSize: 22 }}>
+                <span className="flex items-center gap-2.5 font-semibold text-[#0E8A4A]" style={{ fontSize: 20 }}>
                   <span className="relative flex h-3 w-3">
                     <span className="bc-ping absolute inset-0 rounded-full bg-[#0E8A4A]" />
                     <span className="relative h-3 w-3 rounded-full bg-[#0E8A4A]" />
@@ -625,7 +625,14 @@ export default function BorneClient({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="min-w-0 grow overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            <div
+              className="min-w-0 grow overflow-x-auto"
+              style={{
+                scrollbarWidth: "none",
+                WebkitMaskImage: "linear-gradient(90deg, #000 calc(100% - 60px), transparent 100%)",
+                maskImage: "linear-gradient(90deg, #000 calc(100% - 60px), transparent 100%)",
+              }}
+            >
               <div className="flex w-max gap-3">
                 <button
                   onClick={() => allerAuxOffres()}
@@ -655,8 +662,8 @@ export default function BorneClient({
               <div
                 className="bc-defilant -mx-12 overflow-hidden pb-1"
                 style={{
-                  WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 60px, #000 1020px, transparent 1080px)",
-                  maskImage: "linear-gradient(90deg, transparent 0, #000 60px, #000 1020px, transparent 1080px)",
+                  WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 90px, #000 990px, transparent 1080px)",
+                  maskImage: "linear-gradient(90deg, transparent 0, #000 90px, #000 990px, transparent 1080px)",
                 }}
               >
                 <div
@@ -682,8 +689,8 @@ export default function BorneClient({
                               cle={o.id}
                               className="h-[88px] w-[88px] rounded-[16px]"
                             />
-                            <span className="flex min-w-0 grow flex-col gap-[3px]">
-                              <span className="line-clamp-2 text-[23px] font-bold" style={{ lineHeight: 1.15 }}>
+                            <span className="flex min-w-0 grow flex-col gap-0.5">
+                              <span className="line-clamp-2 font-bold" style={{ fontSize: 22, lineHeight: 1.2 }}>
                                 {tronquer(c.titre, 58)}
                               </span>
                               <span
@@ -692,7 +699,7 @@ export default function BorneClient({
                               >
                                 {c.sousTitre}
                               </span>
-                              <span className="mt-0.5 flex items-center gap-3.5 whitespace-nowrap text-[21px] text-[#3B4152]">
+                              <span className="flex items-center gap-3.5 whitespace-nowrap text-[20px] text-[#3B4152]">
                                 {c.contratNom && (
                                   <span className="flex items-center gap-2">
                                     <span className="h-3.5 w-3.5 rounded-full" style={{ background: couleurContrat(c.contratNom) }} />
@@ -1573,10 +1580,8 @@ export default function BorneClient({
         onClick={onTapLogo}
         aria-hidden="true"
         tabIndex={-1}
-        className="fixed bottom-2 right-2 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-xs font-bold text-black/20"
-      >
-        N
-      </button>
+        className="fixed bottom-0 right-0 z-40 h-14 w-14 bg-transparent"
+      ></button>
 
       {codeSortieOuvert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6">
