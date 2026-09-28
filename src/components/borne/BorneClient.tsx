@@ -642,7 +642,7 @@ export default function BorneClient({
     const commerces = filtres.commercantsSeul;
     ecran = (
       <>
-        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} />
+        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} ville={{ nom: villeAffichee, logoUrl: villeLogoUrl }} />
         <main className="flex min-h-0 grow flex-col gap-11 overflow-y-auto px-12 pt-[52px]">
           <div className="flex flex-col gap-3">
             <h1 className="text-[80px] font-bold" style={{ lineHeight: 1, letterSpacing: "-0.035em" }}>
@@ -805,7 +805,7 @@ export default function BorneClient({
 
     ecran = (
       <>
-        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} />
+        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} ville={{ nom: villeAffichee, logoUrl: villeLogoUrl }} />
         <div className="flex flex-col gap-6 px-12 pb-5 pt-10">
           <div className="flex items-end justify-between gap-6">
             <h1 className="whitespace-nowrap text-[44px] font-bold" style={{ lineHeight: 1, letterSpacing: "-0.025em" }}>
@@ -998,7 +998,7 @@ export default function BorneClient({
 
     ecran = (
       <>
-        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} />
+        <EnTete onAccueil={revenirAAttente} nbSelection={nbSelection} onSelection={versCandidature} ville={{ nom: villeAffichee, logoUrl: villeLogoUrl }} />
         <main
           className="flex min-h-0 grow flex-col gap-8 overflow-y-auto px-12 pt-11"
           onTouchStart={onTouchStart}

@@ -139,7 +139,16 @@ export default async function VillePage({
           </p>
           <p className="text-xs opacity-60 mt-1">Les emplois près de chez vous</p>
         </div>
-        <HeaderHorloge />
+        <div className="flex items-center gap-6">
+          {ville.logo_url && (
+            <div className="hidden sm:flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={ville.logo_url} alt={`Blason de ${ville.nom}`} className="h-12 w-auto max-w-[96px] object-contain" />
+              <span className="font-title text-lg font-bold">{ville.nom}</span>
+            </div>
+          )}
+          <HeaderHorloge />
+        </div>
       </header>
 
       <section
@@ -257,7 +266,12 @@ export default async function VillePage({
       <footer className="border-t border-black/5 bg-white">
         <div className="max-w-5xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-sm">
           <p className="flex items-center gap-2 opacity-80">
-            <IconeBlason className="w-5 h-5 text-vert" />
+            {ville.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ville.logo_url} alt="" className="h-10 w-auto max-w-[80px] object-contain" />
+            ) : (
+              <IconeBlason className="w-5 h-5 text-vert" />
+            )}
             Une initiative de votre ville — {ville.nom}
           </p>
           <p className="opacity-60">En partenariat avec France Travail</p>

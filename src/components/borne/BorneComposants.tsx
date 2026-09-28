@@ -224,17 +224,28 @@ export function EnTete({
   nbSelection,
   onSelection,
   badge,
+  ville,
 }: {
   onAccueil: () => void;
   nbSelection?: number;
   onSelection?: () => void;
   badge?: { texte: string; icone: NomIcone };
+  ville?: { nom: string; logoUrl: string | null };
 }) {
   return (
-    <header className="flex h-[132px] shrink-0 items-center justify-between bg-white px-12 shadow-[0_1px_0_#E4E0D6]">
+    <header className="flex h-[132px] shrink-0 items-center justify-between gap-6 bg-white px-12 shadow-[0_1px_0_#E4E0D6]">
       <button onClick={onAccueil} aria-label="Ici on recrute, retour à l’accueil">
         <Logo />
       </button>
+      {ville && (
+        <div className="flex min-w-0 grow items-center justify-center gap-3">
+          {ville.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ville.logoUrl} alt={`Blason de ${ville.nom}`} className="h-[64px] w-auto max-w-[120px] object-contain" />
+          )}
+          <span className="d truncate text-[30px] font-bold text-[#0F1A45]">{ville.nom}</span>
+        </div>
+      )}
       {badge && (
         <span className="flex h-16 items-center gap-2.5 rounded-full bg-[#E3F4EC] px-[22px] text-[22px] font-bold text-[#0A5C39]">
           <Ic n={badge.icone} s={24} />
