@@ -29,7 +29,6 @@ const SEUIL_GLISSEMENT_PX = 50;
 const DELAI_ENVOI_STATS_MS = 10_000;
 const DELAI_ROTATION_ATTENTE_MS = 9_000;
 const DELAI_CONFIRMATION_S = 45;
-const DELAI_VEILLE_MS = 30_000;
 const DUREE_COMPTEUR_MS = 1200;
 const MAX_SELECTION = 10;
 const PAGE = 5;
@@ -91,9 +90,7 @@ export default function BorneClient({
   } | null>(null);
   const [panierQr, setPanierQr] = useState<{ id: string; lien: string } | null>(null);
   const [secondes, setSecondes] = useState(DELAI_CONFIRMATION_S);
-  const [veille, setVeille] = useState(false);
   const [compteur, setCompteur] = useState(offres.length);
-  const veilleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [codeSortieOuvert, setCodeSortieOuvert] = useState(false);
   const [codeSortieValeur, setCodeSortieValeur] = useState("");
   const [codeSortieErreur, setCodeSortieErreur] = useState(false);
@@ -198,25 +195,6 @@ export default function BorneClient({
     };
   }, [mode, offres.length]);
 
-  // Écran de veille : après 30 s sans contact, un bandeau invite à toucher l'écran
-  const armerVeille = () => {
-    if (veilleTimer.current) clearTimeout(veilleTimer.current);
-    setVeille(false);
-    veilleTimer.current = setTimeout(() => setVeille(true), DELAI_VEILLE_MS);
-  };
-
-  useEffect(() => {
-    if (mode !== "accueil") {
-      if (veilleTimer.current) clearTimeout(veilleTimer.current);
-      setVeille(false);
-      return;
-    }
-    armerVeille();
-    return () => {
-      if (veilleTimer.current) clearTimeout(veilleTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
 
   const revenirAAttente = () => {
     setMode("accueil");
@@ -233,7 +211,6 @@ export default function BorneClient({
 
   const reinitialiserInactivite = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (mode === "accueil") armerVeille();
     if (mode !== "accueil" && mode !== "confirmation") {
       timerRef.current = setTimeout(revenirAAttente, DELAI_INACTIVITE_MS);
     }
@@ -749,15 +726,6 @@ export default function BorneClient({
             </button>
           </div>
 
-          {veille && (
-            <div
-              className="bc-pulse pointer-events-none absolute left-12 right-12 flex items-center justify-center gap-4 rounded-full bg-[#0F1A45] text-white"
-              style={{ bottom: 168, height: 64, fontSize: 28, fontWeight: 700 }}
-            >
-              <Ic n="main" s={34} sw={2} />
-              Touchez l’écran pour voir les offres
-            </div>
-          )}
         </main>
 
         <footer className="relative flex shrink-0 items-center gap-5 px-12" style={{ height: 124 }}>

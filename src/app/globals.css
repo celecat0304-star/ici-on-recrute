@@ -119,11 +119,6 @@ button:active {
   to { transform: scale(2.6); opacity: 0; }
 }
 .bc-ping { animation: bc-ping 1.6s ease-out infinite; }
-@keyframes bc-pulse {
-  0%, 100% { opacity: 0.88; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
-}
-.bc-pulse { animation: bc-pulse 2s ease-in-out infinite; }
 @keyframes bc-pop {
   from { transform: scale(0.4); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -142,7 +137,7 @@ button:active {
 @media (prefers-reduced-motion: reduce) {
   .bc-piste { animation-duration: 200s; }
   .bc-fondu, .bc-pop, .bc-trace, .bc-halo { transition: none; animation: none; }
-  .bc-zoom, .bc-respire, .bc-halo-cta, .bc-ping, .bc-pulse { animation: none; }
+  .bc-zoom, .bc-respire, .bc-halo-cta, .bc-ping { animation: none; }
   .bc-remplir { animation: none; width: 100%; }
 }
 
