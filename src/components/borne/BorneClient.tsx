@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { OffreAffichee } from "@/lib/types";
 import { BarreNav, Clavier, EnTete, Ic, Logo, LogoFranceTravail, Scene } from "./BorneComposants";
+import { imageIllustration } from "@/lib/imagesThemes";
 import {
   CONTRATS,
   FILTRES_VIDES,
@@ -428,9 +429,17 @@ export default function BorneClient({
                             <img src={c.imageUrl} alt={c.imageAlt} className="max-h-full max-w-full object-contain" />
                           </div>
                         ) : (
-                          <div className="d flex h-full w-full items-center justify-center text-[120px] font-bold text-white/90">
-                            {initiales(c.sousTitre || c.titre)}
-                          </div>
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={imageIllustration(c.titre, c.sousTitre, o.id).url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-[15px] text-white">
+                              Photo d’illustration · Pexels
+                            </span>
+                          </>
                         )}
                         <span className="absolute left-5 top-5 flex h-12 items-center gap-2.5 rounded-full border-2 border-white/60 bg-[#0F1A45] pl-4 pr-5 text-[21px] font-bold text-white" style={{ letterSpacing: "0.04em" }}>
                           <Ic n="etoile" s={22} rempli sw={0} />
@@ -1004,6 +1013,24 @@ export default function BorneClient({
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
+          <div className="relative h-[260px] shrink-0 overflow-hidden rounded-[28px] bg-[#DDE3EA]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={
+                infos.imageUrl && !infos.estLogo
+                  ? infos.imageUrl
+                  : imageIllustration(infos.titre, infos.sousTitre, offreCourante.id).url
+              }
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            {!(infos.imageUrl && !infos.estLogo) && (
+              <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-[16px] text-white">
+                Photo d’illustration · Pexels
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-col gap-[18px]">
             <div className="flex items-center gap-4">
               <span

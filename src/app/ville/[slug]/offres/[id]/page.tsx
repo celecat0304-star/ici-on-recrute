@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import CandidatureForm from "@/components/ville/CandidatureForm";
+import { imageIllustration } from "@/lib/imagesThemes";
 import {
   IconePin,
   IconeDocument,
@@ -105,6 +106,11 @@ export default async function OffreDetailPage({
   const tempsTravail =
     source === "commercant" ? offre.temps_travail : offre.duree_travail;
 
+  const aUneImage =
+    (source === "commercant" && offre.image_url) ||
+    (source === "france_travail" && offre.entreprise_logo_url);
+  const illustration = aUneImage ? null : imageIllustration(titre, sousTitre, offre.id);
+
   return (
     <div className="min-h-screen bg-fond text-texte flex flex-col">
       <header className="px-6 py-6">
@@ -137,10 +143,25 @@ export default async function OffreDetailPage({
                 className="max-h-24 max-w-full object-contain"
               />
             </div>
+          ) : illustration ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={illustration.url}
+              alt=""
+              className="w-full h-full max-h-80 object-cover"
+            />
           ) : (
             <IconeMallette className="w-16 h-16 text-white/70" />
           )}
         </div>
+        {illustration && (
+          <p className="text-xs opacity-50 -mt-3">
+            Photo d&apos;illustration :{" "}
+            <a href={illustration.lienPexels} target="_blank" rel="noopener noreferrer" className="underline">
+              {illustration.photographe} / Pexels
+            </a>
+          </p>
+        )}
         {source === "commercant" &&
           offre.image_source === "pexels" &&
           offre.pexels_photographe && (

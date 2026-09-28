@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import VilleListe from "@/components/ville/VilleListe";
+import { imageIllustration } from "@/lib/imagesThemes";
 import HeaderHorloge from "@/components/ville/HeaderHorloge";
 import {
   IconeMallette,
@@ -127,6 +128,10 @@ export default async function VillePage({
   );
   const offreVedette = entreprisesPayantes[0] ?? grandesEntreprisesFT[0] ?? offres[0];
   const vedette = offreVedette ? champsOffre(offreVedette) : null;
+  const illustrationVedette =
+    vedette && offreVedette && !vedette.photo && !vedette.logo
+      ? imageIllustration(vedette.titre, vedette.sousTitre, offreVedette.id)
+      : null;
 
   return (
     <div className="min-h-screen bg-fond text-texte flex flex-col">
@@ -193,8 +198,16 @@ export default async function VillePage({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={vedette.logo} alt="" className="max-h-20 object-contain" />
                 </div>
+              ) : illustrationVedette ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={illustrationVedette.url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <IconeMallette className="w-16 h-16 text-white/70" />
+              )}
+              {illustrationVedette && (
+                <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
+                  Photo d&apos;illustration · Pexels
+                </span>
               )}
               <span className="absolute top-4 left-4 flex items-center gap-1 bg-texte/90 text-white text-xs font-bold px-3 py-1.5 rounded-full">
                 <IconeEtoile className="w-3.5 h-3.5 text-jaune" />
