@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
+import { IconeDocument, IconeChevron } from "@/components/icones/Icones";
 
 export const dynamic = "force-dynamic";
 
@@ -53,54 +55,66 @@ export default async function PanierPage({
         : Promise.resolve({ data: [] as { id: string; intitule: string; entreprise_nom: string | null; type_contrat: string | null; url_origine: string }[] }),
     ]);
 
+  const total = (offresCommercants ?? []).length + (offresFranceTravail ?? []).length;
+
   return (
-    <div className="min-h-screen bg-fond-sombre text-texte-sombre px-6 py-10">
-      <div className="max-w-2xl mx-auto flex flex-col gap-6">
+    <div className="min-h-screen bg-fond text-texte flex flex-col">
+      <header className="px-6 py-5">
+        <p className="font-title text-lg font-black leading-none">
+          ICI <span className="text-vert">✌</span>
+          <br />
+          ON RECRUTE
+        </p>
+      </header>
+
+      <main className="flex-1 max-w-2xl mx-auto w-full px-6 pb-16 flex flex-col gap-6">
         <div>
           <h1 className="font-title text-3xl font-bold">Vos offres sélectionnées</h1>
-          {ville && <p className="opacity-70">à {ville.nom}</p>}
+          {ville && <p className="opacity-70 mt-1">à {ville.nom} · {total} offre{total > 1 ? "s" : ""}</p>}
         </div>
 
         <div className="flex flex-col gap-4">
           {(offresCommercants ?? []).map((o) => (
-            <div key={o.id} className="bg-surface-sombre border border-black/5 shadow-sm rounded-xl p-5">
+            <div key={o.id} className="bg-white border border-black/5 shadow-sm rounded-2xl p-5 flex flex-col gap-2">
               {o.type_contrat && (
-                <span className="bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
+                <span className="self-start flex items-center gap-1 bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
+                  <IconeDocument className="w-3.5 h-3.5" />
                   {o.type_contrat}
                 </span>
               )}
-              <h2 className="text-xl font-bold mt-2">{o.poste}</h2>
+              <h2 className="text-xl font-bold">{o.poste}</h2>
               <p className="opacity-80">{o.nom_commerce}</p>
-              <p className="mt-2">
+              <p className="mt-1">
                 <strong>Comment postuler :</strong> {o.comment_postuler}
               </p>
               {ville && (
-                <a
+                <Link
                   href={`/ville/${ville.slug}/offres/${o.id}`}
-                  className="underline text-sm opacity-70"
+                  className="inline-flex items-center gap-1 text-sm font-bold text-vert hover:underline"
                 >
-                  Voir la fiche complète
-                </a>
+                  Voir la fiche complète <IconeChevron className="w-3.5 h-3.5" />
+                </Link>
               )}
             </div>
           ))}
 
           {(offresFranceTravail ?? []).map((o) => (
-            <div key={o.id} className="bg-surface-sombre border border-black/5 shadow-sm rounded-xl p-5">
+            <div key={o.id} className="bg-white border border-black/5 shadow-sm rounded-2xl p-5 flex flex-col gap-2">
               {o.type_contrat && (
-                <span className="bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
+                <span className="self-start flex items-center gap-1 bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
+                  <IconeDocument className="w-3.5 h-3.5" />
                   {o.type_contrat}
                 </span>
               )}
-              <h2 className="text-xl font-bold mt-2">{o.intitule}</h2>
+              <h2 className="text-xl font-bold">{o.intitule}</h2>
               {o.entreprise_nom && <p className="opacity-80">{o.entreprise_nom}</p>}
               <a
                 href={o.url_origine}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block bg-vert text-white font-bold rounded-lg px-5 py-3"
+                className="self-start mt-2 inline-flex items-center gap-2 bg-vert text-white font-bold rounded-xl px-5 py-3 shadow-md shadow-vert/20 hover:-translate-y-0.5"
               >
-                Postuler sur France Travail
+                Postuler sur France Travail <IconeChevron className="w-4 h-4" />
               </a>
             </div>
           ))}
@@ -110,7 +124,7 @@ export default async function PanierPage({
               <p className="opacity-60">Ce panier ne contient plus d&apos;offres disponibles.</p>
             )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
