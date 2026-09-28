@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import CandidatureForm from "@/components/ville/CandidatureForm";
 import { imageIllustration } from "@/lib/imagesThemes";
 import { salaireAffiche } from "@/components/borne/borneUtils";
+import { BarreSelection, BoutonInteresse } from "@/components/ville/Selection";
 import {
   IconePin,
   IconeDocument,
@@ -229,11 +230,20 @@ export default async function OffreDetailPage({
           </a>
         )}
 
+        <BoutonInteresse
+          slug={slug}
+          villeId={ville.id}
+          offre={{ source, id: offre.id }}
+          variante="large"
+        />
+
         <p className="text-sm opacity-50">
           Source : {source === "commercant" ? "Commerçant du coin" : "France Travail"}
           {illustration && " · Photo d’illustration : Pexels"}
         </p>
       </main>
+
+      <BarreSelection slug={slug} villeId={ville.id} />
     </div>
   );
 }

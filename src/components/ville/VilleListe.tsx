@@ -30,6 +30,7 @@ import {
 } from "@/components/borne/borneUtils";
 import { Vignette } from "@/components/borne/BorneComposants";
 import { useCommunes } from "@/lib/useCommunes";
+import { BoutonInteresse } from "@/components/ville/Selection";
 
 type Filtre = "toutes" | "commerces" | "cdi" | "temps_partiel";
 
@@ -45,11 +46,13 @@ const PAGE = 20;
 export default function VilleListe({
   offres,
   villeSlug,
+  villeId,
   departement,
   centreVille = null,
 }: {
   offres: OffreAffichee[];
   villeSlug: string;
+  villeId: string;
   departement?: string;
   centreVille?: { latitude: number; longitude: number } | null;
 }) {
@@ -315,10 +318,13 @@ export default function VilleListe({
           const lieu = nettoyerLieu(c.lieu, departement);
           const contrat = [c.contratNom, c.contratDuree].filter(Boolean).join(" · ");
           return (
-            <li key={`${offre.source}-${offre.id}`}>
+            <li
+              key={`${offre.source}-${offre.id}`}
+              className="flex min-h-[88px] items-center rounded-[20px] bg-white pr-3 shadow-[0_1px_0_#E4E0D6,0_6px_18px_rgba(15,26,69,0.05)]"
+            >
               <Link
                 href={`/ville/${villeSlug}/offres/${offre.id}`}
-                className="flex min-h-[88px] items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_1px_0_#E4E0D6,0_6px_18px_rgba(15,26,69,0.05)] hover:-translate-y-0.5"
+                className="flex min-w-0 flex-1 items-center gap-3 p-4"
               >
                 <Vignette
                   titre={c.titre}
@@ -373,13 +379,12 @@ export default function VilleListe({
                   )}
                 </div>
 
-                <span
-                  aria-hidden="true"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#0F1A45]"
-                >
-                  <IconeChevron className="h-5 w-5" />
-                </span>
               </Link>
+              <BoutonInteresse
+                slug={villeSlug}
+                villeId={villeId}
+                offre={{ source: offre.source, id: offre.id }}
+              />
             </li>
           );
         })}

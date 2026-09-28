@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { lireToutesLesLignes } from "@/lib/supabase/lireTout";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import VilleListe from "@/components/ville/VilleListe";
+import { BarreSelection } from "@/components/ville/Selection";
 import { imageIllustration } from "@/lib/imagesThemes";
 import { Logo, LogoFranceTravail } from "@/components/borne/BorneComposants";
 import { capitaliser, champsAffichage, nettoyerLieu } from "@/components/borne/borneUtils";
@@ -288,6 +289,7 @@ export default async function VillePage({
         <VilleListe
           offres={offresListe}
           villeSlug={ville.slug}
+          villeId={ville.id}
           departement={departement}
           centreVille={
             ville.latitude != null && ville.longitude != null
@@ -321,6 +323,8 @@ export default async function VillePage({
           <p className="pb-4 text-center text-sm text-[#545A6B]">Photos d&apos;illustration : Pexels</p>
         )}
       </footer>
+
+      <BarreSelection slug={ville.slug} villeId={ville.id} />
     </div>
   );
 }
