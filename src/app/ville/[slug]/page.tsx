@@ -259,6 +259,16 @@ export default async function VillePage({
           </div>
         )}
 
+        <section className="flex flex-col items-center gap-4 rounded-[24px] bg-[#0F1A45] px-6 py-6 text-center text-white sm:flex-row sm:justify-between sm:px-8 sm:text-left">
+          <h2 className="font-title text-2xl font-bold">Vous recrutez à {villeAffichee} ?</h2>
+          <Link
+            href="/commercant"
+            className="inline-flex h-[52px] w-full items-center justify-center rounded-xl bg-[#0E8A4A] px-8 text-lg font-bold text-white sm:w-auto"
+          >
+            Publier une offre
+          </Link>
+        </section>
+
         <div className="flex flex-col items-start gap-4">
           <div className="flex items-center gap-3">
             <span className="font-title text-[56px] font-extrabold leading-none tracking-tight text-[#0E8A4A]">
@@ -288,16 +298,6 @@ export default async function VillePage({
         </div>
 
         <VilleListe offres={offres} villeSlug={ville.slug} departement={departement} />
-
-        <section className="rounded-[28px] bg-[#0F1A45] px-6 py-8 text-center text-white sm:px-10 sm:py-10">
-          <h2 className="font-title text-2xl font-bold">Vous recrutez à {villeAffichee} ?</h2>
-          <Link
-            href="/commercant"
-            className="mt-5 inline-flex h-[52px] items-center justify-center rounded-xl bg-[#0E8A4A] px-8 text-lg font-bold text-white"
-          >
-            Publier une offre
-          </Link>
-        </section>
       </main>
 
       <footer className="border-t border-[#E4E0D6] bg-white">
