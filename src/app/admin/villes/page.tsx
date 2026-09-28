@@ -12,7 +12,7 @@ export default async function AdminVillesPage() {
   const { data } = await supabase
     .from("villes")
     .select(
-      "id, nom, slug, code_postal, code_insee, rayon_recherche_km, photo_hero_url, bornes ( id, nom, lieu ), comptes_mairie ( id )"
+      "id, nom, slug, code_postal, code_insee, rayon_recherche_km, photo_hero_url, logo_url, bornes ( id, nom, lieu ), comptes_mairie ( id )"
     )
     .order("nom", { ascending: true });
 
@@ -24,6 +24,7 @@ export default async function AdminVillesPage() {
     code_insee: v.code_insee,
     rayon_recherche_km: v.rayon_recherche_km,
     photo_hero_url: v.photo_hero_url,
+    logo_url: v.logo_url,
     bornes: v.bornes ?? [],
     aUnCompteMairie: (v.comptes_mairie ?? []).length > 0,
   }));

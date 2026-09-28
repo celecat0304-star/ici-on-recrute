@@ -128,6 +128,24 @@ export function Ic({
   );
 }
 
+// Le fichier /logo-france-travail.png est à déposer dans le dossier public/ ;
+// tant qu'il est absent, le nom en texte s'affiche à la place.
+export function LogoFranceTravail() {
+  const [absent, setAbsent] = useState(false);
+  if (absent) {
+    return <span className="d text-[26px] font-bold text-[#0F1A45]">France Travail</span>;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo-france-travail.png"
+      alt="France Travail"
+      onError={() => setAbsent(true)}
+      className="h-[76px] w-auto object-contain"
+    />
+  );
+}
+
 export function Scene({
   children,
   onActivite,

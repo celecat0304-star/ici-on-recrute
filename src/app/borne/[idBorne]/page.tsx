@@ -14,15 +14,15 @@ export default async function BornePage({
 
   const { data: borne } = await supabase
     .from("bornes")
-    .select("id, nom, lieu, ville_id, villes ( nom, slug, photo_hero_url )")
+    .select("id, nom, lieu, ville_id, villes ( nom, slug, photo_hero_url, logo_url )")
     .eq("id", idBorne)
     .single();
 
   if (!borne) notFound();
 
   const villeRelation = borne.villes as unknown as
-    | { nom: string; slug: string; photo_hero_url: string | null }
-    | { nom: string; slug: string; photo_hero_url: string | null }[]
+    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null }
+    | { nom: string; slug: string; photo_hero_url: string | null; logo_url: string | null }[]
     | null;
   const ville = Array.isArray(villeRelation) ? villeRelation[0] : villeRelation;
 
@@ -85,6 +85,7 @@ export default async function BornePage({
       villeNom={ville?.nom ?? ""}
       villeSlug={ville?.slug ?? ""}
       villePhotoUrl={ville?.photo_hero_url ?? null}
+      villeLogoUrl={ville?.logo_url ?? null}
       offres={offres}
       caseA={caseA}
       caseB={caseB}

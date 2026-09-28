@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { OffreAffichee } from "@/lib/types";
-import { BarreNav, Clavier, EnTete, Ic, Logo, Scene } from "./BorneComposants";
+import { BarreNav, Clavier, EnTete, Ic, Logo, LogoFranceTravail, Scene } from "./BorneComposants";
 import {
   CONTRATS,
   FILTRES_VIDES,
@@ -38,6 +38,7 @@ type Props = {
   villeNom: string;
   villeSlug: string;
   villePhotoUrl?: string | null;
+  villeLogoUrl?: string | null;
   offres: OffreAffichee[];
   caseA: OffreAffichee[];
   caseB: OffreAffichee[];
@@ -61,6 +62,7 @@ export default function BorneClient({
   villeId,
   villeNom,
   villePhotoUrl = null,
+  villeLogoUrl = null,
   offres,
   caseA,
   caseB,
@@ -81,6 +83,7 @@ export default function BorneClient({
     email: string;
     lien: string;
   } | null>(null);
+  const [panierQr, setPanierQr] = useState<{ id: string; lien: string } | null>(null);
   const [secondes, setSecondes] = useState(DELAI_CONFIRMATION_S);
   const [codeSortieOuvert, setCodeSortieOuvert] = useState(false);
   const [codeSortieValeur, setCodeSortieValeur] = useState("");
@@ -165,6 +168,7 @@ export default function BorneClient({
     setSelection([]);
     setEmail("");
     setPanierConfirmation(null);
+    setPanierQr(null);
     setErreurPanier("");
     setFiltres(FILTRES_VIDES);
     setClavierOuvert(false);
@@ -249,6 +253,31 @@ export default function BorneClient({
 
   const emailValide = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email);
 
+  // Le QR code est prêt dès l'ouverture de l'écran, sans attendre d'e-mail :
+  // on crée le panier tout de suite (sans adresse) et on le recrée si la sélection change.
+  const cleSelection = selection.map((s) => `${s.source}:${s.id}`).join(",");
+  useEffect(() => {
+    if (mode !== "candidature" || selection.length === 0) return;
+    let annule = false;
+    setPanierQr(null);
+    fetch("/api/panier/creer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ villeId, offres: selection }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (annule || !data.lien) return;
+        setPanierQr({ id: data.panierId, lien: data.lien });
+        offresSelectionnees.forEach((o) => enregistrerEvenement("qr_affiche", o));
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, cleSelection]);
+
   const envoyerPanier = async () => {
     setErreurPanier("");
     setEnvoiPanierEnCours(true);
@@ -256,11 +285,11 @@ export default function BorneClient({
       const res = await fetch("/api/panier/creer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ villeId, email, offres: selection }),
+        body: JSON.stringify({ villeId, email, offres: selection, panierId: panierQr?.id }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        offresSelectionnees.forEach((o) => enregistrerEvenement("qr_affiche", o));
+        if (!panierQr) offresSelectionnees.forEach((o) => enregistrerEvenement("qr_affiche", o));
         setPanierConfirmation({ email, lien: data.lien });
         setEmail("");
         setMode("confirmation");
@@ -343,7 +372,7 @@ export default function BorneClient({
             className="absolute left-0 top-0 h-[548px] w-[1080px]"
             style={{
               background:
-                "linear-gradient(90deg, #EEF2F7 0%, rgba(238,242,247,0.96) 36%, rgba(238,242,247,0.35) 52%, rgba(238,242,247,0) 64%)",
+                "linear-gradient(90deg, #EEF2F7 0%, rgba(238,242,247,0.96) 52%, rgba(238,242,247,0.55) 72%, rgba(238,242,247,0) 92%)",
             }}
           />
           <div
@@ -594,11 +623,17 @@ export default function BorneClient({
         <footer className="flex h-[124px] shrink-0 items-center gap-5 px-12">
           <div className="flex flex-col gap-1.5">
             <span className="text-[19px] text-[#3B4152]">Une initiative de votre ville</span>
-            <span className="d text-[30px] font-bold">{villeAffichee}</span>
+            <div className="flex items-center gap-3">
+              {villeLogoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={villeLogoUrl} alt={`Logo de ${villeAffichee}`} className="h-[56px] w-auto max-w-[200px] object-contain" />
+              )}
+              <span className="d text-[30px] font-bold">{villeAffichee}</span>
+            </div>
           </div>
           <div className="flex grow items-center justify-end gap-3.5">
             <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
-            <span className="d text-[26px] font-bold text-[#0F1A45]">France Travail</span>
+            <LogoFranceTravail />
           </div>
         </footer>
       </>
@@ -1131,7 +1166,7 @@ export default function BorneClient({
           </div>
 
           {offresSelectionnees.length > 0 ? (
-            <ul className="bc-carte m-0 max-h-[292px] shrink-0 list-none overflow-y-auto rounded-[28px] p-0">
+            <ul className="bc-carte m-0 max-h-[196px] shrink-0 list-none overflow-y-auto rounded-[28px] p-0">
               {offresSelectionnees.map((o) => {
                 const c = champsAffichage(o);
                 return (
@@ -1180,48 +1215,87 @@ export default function BorneClient({
             </div>
           )}
 
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[28px] font-bold">Votre adresse e-mail</span>
-              <span className="text-[21px] text-[#545A6B]">Exemple : prenom.nom@gmail.com</span>
-            </div>
-            <div className="flex h-[100px] items-center gap-3.5 rounded-[28px] bg-white pl-7 pr-3 shadow-[inset_0_0_0_3px_#2B3BE0,0_0_0_8px_#E9EBFD]">
-              <Ic n="envoyer" s={34} className="text-[#2B3BE0]" />
-              <span role="textbox" aria-label="Votre adresse e-mail" className="flex min-w-0 grow items-center overflow-hidden whitespace-nowrap text-[34px] font-bold" style={{ letterSpacing: "0.01em" }}>
-                {email || <span className="font-normal text-[#8A867B]">votre adresse e-mail</span>}
+          <div className="flex items-stretch gap-4">
+            <section className="bc-carte flex w-[420px] shrink-0 flex-col items-center gap-3.5 rounded-[28px] p-6 text-center">
+              <span className="flex h-11 items-center gap-2 rounded-full bg-[#E9EBFD] px-5 text-[22px] font-bold text-[#1A249E]">
+                Option 1
               </span>
-              {emailValide && <Ic n="coche" s={36} sw={2.8} className="text-[#0E8A4A]" />}
-              <button
-                onClick={() => setEmail("")}
-                aria-label="Effacer l’adresse"
-                className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-[#F1EEE6]"
-              >
-                <Ic n="croix" s={28} sw={2.4} />
-              </button>
-            </div>
-            {erreurPanier && (
-              <p role="alert" className="text-[24px] font-bold text-[#B42318]">
-                {erreurPanier}
+              <h2 className="text-[30px] font-bold" style={{ lineHeight: 1.1 }}>
+                Scannez ce code
+              </h2>
+              <div className="flex h-[264px] w-[264px] items-center justify-center rounded-3xl shadow-[inset_0_0_0_3px_#0F1A45]">
+                {panierQr && nbSelection > 0 ? (
+                  <QRCodeSVG value={panierQr.lien} size={224} fgColor="#0F1A45" />
+                ) : (
+                  <span className="px-6 text-[22px] text-[#545A6B]">
+                    {nbSelection > 0 ? "QR code en préparation…" : "Aucune offre"}
+                  </span>
+                )}
+              </div>
+              <p className="text-[21px] text-[#545A6B]" style={{ lineHeight: 1.3 }}>
+                Avec l’appareil photo de votre téléphone
               </p>
-            )}
+            </section>
+
+            <div className="flex items-center text-[28px] font-bold text-[#545A6B]">OU</div>
+
+            <section className="bc-carte flex min-w-0 grow flex-col gap-3.5 rounded-[28px] p-6">
+              <span className="flex h-11 w-fit items-center gap-2 rounded-full bg-[#E9EBFD] px-5 text-[22px] font-bold text-[#1A249E]">
+                Option 2
+              </span>
+              <h2 className="text-[30px] font-bold" style={{ lineHeight: 1.1 }}>
+                Recevez-les par e-mail
+              </h2>
+              <div className="flex h-[92px] items-center gap-2.5 rounded-[24px] bg-white pl-5 pr-2.5 shadow-[inset_0_0_0_3px_#2B3BE0,0_0_0_6px_#E9EBFD]">
+                <Ic n="envoyer" s={30} className="shrink-0 text-[#2B3BE0]" />
+                <span role="textbox" aria-label="Votre adresse e-mail" className="flex min-w-0 grow items-center overflow-hidden whitespace-nowrap text-[27px] font-bold">
+                  {email || <span className="font-normal text-[#8A867B]">prenom.nom@gmail.com</span>}
+                </span>
+                {emailValide && <Ic n="coche" s={32} sw={2.8} className="shrink-0 text-[#0E8A4A]" />}
+                <button
+                  onClick={() => setEmail("")}
+                  aria-label="Effacer l’adresse"
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6]"
+                >
+                  <Ic n="croix" s={26} sw={2.4} />
+                </button>
+              </div>
+              <p className="text-[21px] text-[#545A6B]" style={{ lineHeight: 1.3 }}>
+                Tapez votre adresse sur le clavier ci-dessous, puis touchez « Envoyer ». Elle sert uniquement à vous envoyer ces offres.
+              </p>
+              {erreurPanier && (
+                <p role="alert" className="text-[22px] font-bold text-[#B42318]">
+                  {erreurPanier}
+                </p>
+              )}
+            </section>
           </div>
 
           <Clavier mode="email" valeur={email} onChange={setEmail} />
         </main>
 
         <div className="flex flex-col gap-3 px-12 pb-[26px] pt-6">
-          <button
-            onClick={envoyerPanier}
-            disabled={!emailValide || envoiPanierEnCours || nbSelection === 0}
-            className="bc-vert flex h-[132px] w-full items-center justify-center gap-5 rounded-full disabled:opacity-40"
-          >
-            <Ic n="envoyer" s={44} />
-            <span className="d text-[42px] font-bold" style={{ letterSpacing: "0.01em" }}>
-              {envoiPanierEnCours ? "ENVOI EN COURS…" : "ENVOYER MES OFFRES"}
-            </span>
-          </button>
+          <div className="flex gap-3.5">
+            <button
+              onClick={revenirAAttente}
+              className="flex h-[132px] w-[340px] shrink-0 items-center justify-center gap-3 rounded-full bg-white text-[28px] font-bold shadow-[inset_0_0_0_2px_#0F1A45]"
+            >
+              <Ic n="coche" s={34} sw={2.6} />
+              J’ai scanné, terminer
+            </button>
+            <button
+              onClick={envoyerPanier}
+              disabled={!emailValide || envoiPanierEnCours || nbSelection === 0}
+              className="bc-vert flex h-[132px] grow items-center justify-center gap-4 rounded-full disabled:opacity-40"
+            >
+              <Ic n="envoyer" s={42} />
+              <span className="d text-[36px] font-bold" style={{ letterSpacing: "0.01em" }}>
+                {envoiPanierEnCours ? "ENVOI EN COURS…" : "ENVOYER PAR E-MAIL"}
+              </span>
+            </button>
+          </div>
           <p className="text-center text-[21px] text-[#545A6B]">
-            Votre adresse sert uniquement à vous envoyer ces offres. Un QR code s’affiche ensuite pour les ouvrir tout de suite.
+            Au choix : scannez le code, ou recevez le lien par e-mail. Rien n’est gardé sur la borne.
           </p>
         </div>
         <BarreNav onRetour={() => setMode("offres")} labelRetour="Ajouter d’autres offres" onAccueil={revenirAAttente} labelAccueil="Annuler" />

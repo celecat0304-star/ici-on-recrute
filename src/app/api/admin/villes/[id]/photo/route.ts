@@ -9,7 +9,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { photoBase64 } = await request.json();
+  const { photoBase64, type } = await request.json();
+  const estLogo = type === "logo";
 
   const correspondance =
     typeof photoBase64 === "string"
@@ -25,7 +26,8 @@ export async function POST(
   }
 
   const supabase = createAdminClient();
-  const chemin = `villes/${id}-${Date.now()}.jpg`;
+  const extension = correspondance[1] === "jpeg" ? "jpg" : correspondance[1];
+  const chemin = `villes/${estLogo ? "logo" : "photo"}-${id}-${Date.now()}.${extension}`;
 
   const { error: erreurUpload } = await supabase.storage
     .from(BUCKET_PHOTOS)
@@ -38,7 +40,7 @@ export async function POST(
 
   const { error } = await supabase
     .from("villes")
-    .update({ photo_hero_url: url })
+    .update(estLogo ? { logo_url: url } : { photo_hero_url: url })
     .eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

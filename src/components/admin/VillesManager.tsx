@@ -11,6 +11,7 @@ export type VilleAvecDetails = {
   code_insee: string | null;
   rayon_recherche_km: number;
   photo_hero_url: string | null;
+  logo_url: string | null;
   bornes: { id: string; nom: string; lieu: string }[];
   aUnCompteMairie: boolean;
 };
@@ -121,6 +122,7 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
   const [photoHero, setPhotoHero] = useState(ville.photo_hero_url ?? "");
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const [envoiFichier, setEnvoiFichier] = useState(false);
+  const [logo, setLogo] = useState(ville.logo_url ?? "");
 
   const enregistrerPhotoHero = async () => {
     setEnvoiPhoto(true);
@@ -133,7 +135,10 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
     router.refresh();
   };
 
-  const televerserPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const televerserImage = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "photo" | "logo"
+  ) => {
     const fichier = e.target.files?.[0];
     e.target.value = "";
     if (!fichier) return;
@@ -141,21 +146,25 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
     setEnvoiFichier(true);
     try {
       const image = await createImageBitmap(fichier);
-      const echelle = Math.min(1, 2000 / image.width);
+      const largeurMax = type === "logo" ? 800 : 2000;
+      const echelle = Math.min(1, largeurMax / image.width);
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(image.width * echelle);
       canvas.height = Math.round(image.height * echelle);
       canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const photoBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      // Le logo reste en PNG pour garder les fonds transparents
+      const photoBase64 =
+        type === "logo" ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.85);
 
       const res = await fetch(`/api/admin/villes/${ville.id}/photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoBase64 }),
+        body: JSON.stringify({ photoBase64, type }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setPhotoHero(data.url);
+        if (type === "logo") setLogo(data.url);
+        else setPhotoHero(data.url);
         router.refresh();
       } else {
         setErreur(data.error ?? "Erreur pendant l'envoi de la photo.");
@@ -260,7 +269,24 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={televerserPhoto}
+              onChange={(e) => televerserImage(e, "photo")}
+              disabled={envoiFichier}
+              className="sr-only"
+            />
+          </label>
+        </div>
+        <p className="font-bold mt-2">Logo de la ville (blason)</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" className="h-16 w-auto max-w-[160px] object-contain rounded-lg bg-white border border-black/10 p-1" />
+          )}
+          <label className="min-h-[40px] px-4 rounded-lg bg-vert text-white font-bold text-sm inline-flex items-center cursor-pointer">
+            {envoiFichier ? "Envoi en cours..." : "Choisir le logo sur mon ordinateur"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => televerserImage(e, "logo")}
               disabled={envoiFichier}
               className="sr-only"
             />
