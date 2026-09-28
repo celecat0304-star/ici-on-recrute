@@ -100,11 +100,11 @@ export default async function OffreDetailPage({
 
   return (
     <div className="min-h-screen bg-fond-sombre text-texte-sombre flex flex-col">
-      <header className="px-6 py-6 border-b border-white/10">
+      <header className="px-6 py-6 border-b border-black/5">
         <div className="max-w-2xl mx-auto">
           <Link
             href={`/ville/${slug}`}
-            className="opacity-70 hover:opacity-100 hover:text-vert-clair inline-flex items-center gap-1"
+            className="opacity-70 hover:opacity-100 hover:text-vert inline-flex items-center gap-1"
           >
             ← Retour aux offres de {ville.nom}
           </Link>
@@ -140,7 +140,7 @@ export default async function OffreDetailPage({
         )}
 
         {offre.type_contrat && (
-          <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full shadow-md shadow-jaune/10">
+          <span className="self-start bg-jaune text-texte font-bold px-4 py-2 rounded-full shadow-md shadow-jaune/20">
             {offre.type_contrat}
           </span>
         )}
@@ -158,8 +158,8 @@ export default async function OffreDetailPage({
 
         {source === "commercant" ? (
           <>
-            <div className="bg-surface-sombre border border-white/10 rounded-xl p-5 mt-4">
-              <p className="font-bold mb-1 text-vert-clair">Comment postuler ?</p>
+            <div className="bg-white border border-black/5 shadow-sm rounded-xl p-5 mt-4">
+              <p className="font-bold mb-1 text-vert">Comment postuler ?</p>
               <p>{offre.comment_postuler}</p>
             </div>
             {offre.email_contact && <CandidatureForm offreId={offre.id} />}

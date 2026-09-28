@@ -79,7 +79,7 @@ export default async function VillePage({
 
   return (
     <div className="min-h-screen bg-fond-sombre text-texte-sombre flex flex-col">
-      <header className="sticky top-0 z-10 px-6 py-6 border-b border-white/10 bg-fond-sombre/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 px-6 py-6 border-b border-black/5 bg-fond-sombre/90 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <span className="w-3 h-8 bg-jaune rounded-full shrink-0" aria-hidden="true" />
           <div>
@@ -92,7 +92,7 @@ export default async function VillePage({
       <div className="max-w-4xl mx-auto w-full px-6">
         <Link
           href="/commercant"
-          className="block mt-6 bg-jaune text-texte rounded-xl px-6 py-4 font-bold text-center shadow-lg shadow-jaune/10 hover:shadow-xl hover:shadow-jaune/20 hover:-translate-y-0.5"
+          className="block mt-6 bg-jaune text-texte rounded-xl px-6 py-4 font-bold text-center shadow-lg shadow-jaune/20 hover:shadow-xl hover:shadow-jaune/30 hover:-translate-y-0.5"
         >
           Vous recrutez ? Publier une offre
         </Link>

@@ -67,8 +67,8 @@ export default function CandidatureForm({ offreId }: { offreId: string }) {
 
   if (envoyee) {
     return (
-      <div className="bg-surface-sombre rounded-xl p-5 mt-4">
-        <p className="font-bold text-vert-clair">
+      <div className="bg-white border border-black/5 shadow-sm rounded-xl p-5 mt-4">
+        <p className="font-bold text-vert">
           Votre candidature a bien été envoyée !
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function CandidatureForm({ offreId }: { offreId: string }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="bg-surface-sombre rounded-xl p-5 mt-4 flex flex-col gap-3"
+      className="bg-white border border-black/5 shadow-sm rounded-xl p-5 mt-4 flex flex-col gap-3"
     >
       <p className="font-bold">Postuler en ligne</p>
 
@@ -128,7 +128,7 @@ export default function CandidatureForm({ offreId }: { offreId: string }) {
         </label>
       )}
 
-      {erreur && <p className="text-red-400">{erreur}</p>}
+      {erreur && <p className="text-red-600">{erreur}</p>}
 
       <button
         type="submit"
@@ -140,8 +140,8 @@ export default function CandidatureForm({ offreId }: { offreId: string }) {
 
       <style jsx>{`
         .input {
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(0, 0, 0, 0.12);
+          background: white;
           border-radius: 0.5rem;
           padding: 0.6rem 0.8rem;
           color: inherit;

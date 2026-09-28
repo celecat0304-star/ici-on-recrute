@@ -63,7 +63,7 @@ export default async function PanierPage({
 
         <div className="flex flex-col gap-4">
           {(offresCommercants ?? []).map((o) => (
-            <div key={o.id} className="bg-surface-sombre rounded-xl p-5">
+            <div key={o.id} className="bg-surface-sombre border border-black/5 shadow-sm rounded-xl p-5">
               {o.type_contrat && (
                 <span className="bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
                   {o.type_contrat}
@@ -86,7 +86,7 @@ export default async function PanierPage({
           ))}
 
           {(offresFranceTravail ?? []).map((o) => (
-            <div key={o.id} className="bg-surface-sombre rounded-xl p-5">
+            <div key={o.id} className="bg-surface-sombre border border-black/5 shadow-sm rounded-xl p-5">
               {o.type_contrat && (
                 <span className="bg-jaune text-texte font-bold px-3 py-1 rounded-full text-sm">
                   {o.type_contrat}

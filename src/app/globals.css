@@ -1,21 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #edf1ec;
-  --foreground: #18201c;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-vert: #1e5a40;
-  --color-jaune: #f3c63a;
-  --color-fond: #edf1ec;
-  --color-texte: #18201c;
-  --color-fond-sombre: #101b15;
-  --color-surface-sombre: #182720;
-  --color-texte-sombre: #edf1ec;
-  --color-vert-clair: #5bb98c;
+  /* Palette "bleu/vert" : --color-vert reste le nom du token principal (bleu)
+     et --color-jaune celui de l'accent fort (vert), pour ne pas avoir à
+     renommer toutes les classes déjà utilisées dans l'appli. */
+  --color-vert: #2563eb;
+  --color-jaune: #16a34a;
+  --color-fond: #f1f5f9;
+  --color-texte: #0f172a;
+  --color-surface: #ffffff;
+  --color-fond-sombre: #f1f5f9;
+  --color-surface-sombre: #ffffff;
+  --color-texte-sombre: #0f172a;
+  --color-vert-clair: #3b82f6;
   --font-title: var(--font-bricolage);
   --font-body: var(--font-atkinson);
 }
@@ -45,7 +49,7 @@ button:active {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-jaune);
+  outline: 3px solid var(--color-vert);
   outline-offset: 2px;
   border-radius: 4px;
 }
