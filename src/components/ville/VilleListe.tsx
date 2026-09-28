@@ -10,7 +10,15 @@ import {
   IconeCalendrier,
   IconePin,
   IconeChevron,
+  IconeLoupe,
 } from "@/components/icones/Icones";
+import {
+  champsAffichage,
+  couleurContrat,
+  initiales,
+  nettoyerLieu,
+  tronquer,
+} from "@/components/borne/borneUtils";
 
 type Filtre = "toutes" | "commerces" | "cdi" | "temps_partiel";
 
@@ -21,167 +29,154 @@ const FILTRES: { valeur: Filtre; libelle: string; Icone: typeof IconeGrille }[] 
   { valeur: "temps_partiel", libelle: "Temps partiel", Icone: IconeCalendrier },
 ];
 
-const PALETTE_AVATAR = [
-  "#2563eb",
-  "#16a34a",
-  "#ea580c",
-  "#7c3aed",
-  "#0891b2",
-  "#db2777",
-];
+const PAGE = 20;
+const TEINTES = ["#0F1A45", "#0E8A4A", "#2B3BE0", "#8A4200", "#7A2E6E", "#3B4152"];
 
-function couleurAvatar(texte: string) {
-  const somme = texte
-    .split("")
-    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return PALETTE_AVATAR[somme % PALETTE_AVATAR.length];
-}
-
-function couleurContrat(contrat: string | null) {
-  if (!contrat) return "#94a3b8";
-  const c = contrat.toLowerCase();
-  if (c.includes("cdi")) return "#16a34a";
-  if (c.includes("intérim") || c.includes("interim")) return "#ea580c";
-  if (c.includes("cdd")) return "#2563eb";
-  return "#94a3b8";
-}
-
-function champs(offre: OffreAffichee) {
-  if (offre.source === "commercant") {
-    return {
-      titre: offre.poste,
-      sousTitre: offre.nom_commerce,
-      lieu: offre.quartier,
-      contrat: offre.type_contrat,
-      tempsTravail: offre.temps_travail,
-      logo: offre.image_url,
-    };
-  }
-  return {
-    titre: offre.intitule,
-    sousTitre: offre.entreprise_nom,
-    lieu: offre.lieu_travail,
-    contrat: offre.type_contrat,
-    tempsTravail: offre.duree_travail,
-    logo: offre.entreprise_logo_url,
-  };
+function teinte(texte: string) {
+  let h = 0;
+  for (let i = 0; i < texte.length; i++) h = (h * 31 + texte.charCodeAt(i)) >>> 0;
+  return TEINTES[h % TEINTES.length];
 }
 
 export default function VilleListe({
   offres,
   villeSlug,
+  departement,
 }: {
   offres: OffreAffichee[];
   villeSlug: string;
+  departement?: string;
 }) {
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<Filtre>("toutes");
+  const [visibles, setVisibles] = useState(PAGE);
 
   const offresFiltrees = useMemo(() => {
     const rechercheMinuscule = recherche.trim().toLowerCase();
     return offres.filter((offre) => {
-      const { titre, sousTitre, tempsTravail, contrat } = champs(offre);
-
+      const c = champsAffichage(offre);
       if (filtre === "commerces" && offre.source !== "commercant") return false;
-      if (filtre === "cdi" && contrat !== "CDI") return false;
+      if (filtre === "cdi" && c.contratNom !== "CDI") return false;
       if (
         filtre === "temps_partiel" &&
-        !(tempsTravail ?? "").toLowerCase().includes("partiel")
+        !(c.tempsTravail ?? "").toLowerCase().includes("partiel")
       )
         return false;
-
       if (!rechercheMinuscule) return true;
-      return `${titre} ${sousTitre ?? ""}`
-        .toLowerCase()
-        .includes(rechercheMinuscule);
+      return `${c.titre} ${c.sousTitre ?? ""}`.toLowerCase().includes(rechercheMinuscule);
     });
   }, [offres, recherche, filtre]);
 
-  return (
-    <div id="offres" className="flex flex-col gap-6 scroll-mt-24">
-      <input
-        type="search"
-        placeholder="Rechercher un métier, une entreprise..."
-        value={recherche}
-        onChange={(e) => setRecherche(e.target.value)}
-        className="w-full rounded-xl bg-white border border-black/10 shadow-sm px-4 py-3 text-lg outline-none focus:border-vert focus:ring-2 focus:ring-vert/20"
-      />
+  const affichees = offresFiltrees.slice(0, visibles);
+  const restantes = offresFiltrees.length - affichees.length;
 
-      <div className="flex flex-wrap gap-2">
-        {FILTRES.map(({ valeur, libelle, Icone }) => (
-          <button
-            key={valeur}
-            onClick={() => setFiltre(valeur)}
-            className={
-              "flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm border " +
-              (filtre === valeur
-                ? "bg-vert text-white border-vert shadow-md shadow-vert/20"
-                : "bg-white text-texte/70 border-black/10 hover:border-vert/40 hover:text-vert")
-            }
-          >
-            <Icone className="w-4 h-4" />
-            {libelle}
-          </button>
-        ))}
+  return (
+    <div id="offres" className="flex flex-col gap-5 scroll-mt-6">
+      <div className="relative">
+        <IconeLoupe className="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-[#545A6B]" />
+        <input
+          type="search"
+          placeholder="Métier, entreprise…"
+          aria-label="Rechercher un métier ou une entreprise"
+          value={recherche}
+          onChange={(e) => {
+            setRecherche(e.target.value);
+            setVisibles(PAGE);
+          }}
+          className="h-14 w-full rounded-2xl border border-[#E4E0D6] bg-white pl-12 pr-4 text-base outline-none shadow-sm focus:border-[#2B3BE0] focus:ring-2 focus:ring-[#2B3BE0]/20"
+        />
       </div>
 
-      <p className="opacity-60 text-sm uppercase tracking-wide">
+      <div
+        className="-mx-5 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+        style={{
+          WebkitMaskImage: "linear-gradient(90deg, #000 calc(100% - 48px), transparent 100%)",
+          maskImage: "linear-gradient(90deg, #000 calc(100% - 48px), transparent 100%)",
+        }}
+      >
+        <div className="flex w-max gap-2 pr-12">
+          {FILTRES.map(({ valeur, libelle, Icone }) => (
+            <button
+              key={valeur}
+              onClick={() => {
+                setFiltre(valeur);
+                setVisibles(PAGE);
+              }}
+              className={
+                "flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-base font-bold " +
+                (filtre === valeur
+                  ? "border-[#2B3BE0] bg-[#2B3BE0] text-white"
+                  : "border-[#E4E0D6] bg-white text-[#3B4152]")
+              }
+            >
+              <Icone className="h-4 w-4" />
+              {libelle}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-sm text-[#545A6B]">
         {offresFiltrees.length} offre{offresFiltrees.length > 1 ? "s" : ""}
       </p>
 
-      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {offresFiltrees.map((offre) => {
-          const { titre, sousTitre, lieu, contrat, tempsTravail, logo } =
-            champs(offre);
-          const estCommercant = offre.source === "commercant";
-          const initiale = (sousTitre || titre).charAt(0).toUpperCase();
+      <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 lg:grid-cols-2">
+        {affichees.map((offre) => {
+          const c = champsAffichage(offre);
+          const nomEntreprise = c.sousTitre || c.titre;
+          const lieu = nettoyerLieu(c.lieu, departement);
+          const contrat = [c.contratNom, c.contratDuree].filter(Boolean).join(" · ");
           return (
             <li key={`${offre.source}-${offre.id}`}>
               <Link
                 href={`/ville/${villeSlug}/offres/${offre.id}`}
-                className="group flex items-start gap-3 bg-white rounded-xl p-4 border border-black/5 shadow-sm hover:-translate-y-0.5 hover:shadow-lg h-full"
+                className="flex min-h-[88px] items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_1px_0_#E4E0D6,0_6px_18px_rgba(15,26,69,0.05)] hover:-translate-y-0.5"
               >
-                <div
-                  className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden text-white font-bold text-lg"
-                  style={{ background: couleurAvatar(sousTitre || titre) }}
-                >
-                  {logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logo} alt="" className="w-full h-full object-contain bg-white p-1" />
-                  ) : (
-                    initiale
-                  )}
-                </div>
+                {c.imageUrl && c.estLogo ? (
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[#E4E0D6] bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.imageUrl} alt="" className="h-full w-full object-contain p-1" />
+                  </span>
+                ) : (
+                  <span
+                    className="font-title flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] text-xl font-bold text-white"
+                    style={{ background: teinte(nomEntreprise) }}
+                  >
+                    {initiales(nomEntreprise).charAt(0)}
+                  </span>
+                )}
 
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-bold leading-snug group-hover:text-vert">
-                    {titre}
-                  </h2>
-                  <p className="opacity-70 text-sm truncate">{sousTitre}</p>
-                  {estCommercant && (
-                    <span className="inline-block mt-1 bg-jaune text-texte text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-bold leading-snug">{tronquer(c.titre, 80)}</h2>
+                  {c.sousTitre && (
+                    <p className="truncate text-sm font-semibold uppercase tracking-wide text-[#545A6B]">
+                      {c.sousTitre}
+                    </p>
+                  )}
+                  {offre.source === "commercant" && (
+                    <span className="mt-1 inline-block rounded-full bg-[#E3F4EC] px-2.5 py-0.5 text-sm font-bold text-[#0A5C39]">
                       Commerçant du coin
                     </span>
                   )}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs opacity-70">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#3B4152]">
                     {contrat && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ background: couleurContrat(contrat) }}
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ background: couleurContrat(c.contratNom) }}
                         />
                         {contrat}
                       </span>
                     )}
-                    {tempsTravail && (
+                    {c.tempsTravail && (
                       <span className="flex items-center gap-1">
-                        <IconeCalendrier className="w-3.5 h-3.5" />
-                        {tempsTravail}
+                        <IconeCalendrier className="h-4 w-4" />
+                        {c.tempsTravail}
                       </span>
                     )}
                     {lieu && (
                       <span className="flex items-center gap-1">
-                        <IconePin className="w-3.5 h-3.5" />
+                        <IconePin className="h-4 w-4" />
                         {lieu}
                       </span>
                     )}
@@ -190,20 +185,29 @@ export default function VilleListe({
 
                 <span
                   aria-hidden="true"
-                  className="shrink-0 w-8 h-8 rounded-full bg-vert/10 text-vert flex items-center justify-center group-hover:bg-vert group-hover:text-white"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#0F1A45]"
                 >
-                  <IconeChevron className="w-4 h-4" />
+                  <IconeChevron className="h-5 w-5" />
                 </span>
               </Link>
             </li>
           );
         })}
         {offresFiltrees.length === 0 && (
-          <p className="opacity-60 col-span-2">
-            Aucune offre ne correspond à ta recherche.
-          </p>
+          <li className="py-8 text-center text-[#545A6B] lg:col-span-2">
+            Aucune offre ne correspond à votre recherche.
+          </li>
         )}
       </ul>
+
+      {restantes > 0 && (
+        <button
+          onClick={() => setVisibles((v) => v + PAGE)}
+          className="flex h-[52px] w-full items-center justify-center rounded-2xl border-2 border-[#2B3BE0] bg-white text-base font-bold text-[#2B3BE0]"
+        >
+          Voir {Math.min(PAGE, restantes)} offre{Math.min(PAGE, restantes) > 1 ? "s" : ""} de plus
+        </button>
+      )}
     </div>
   );
 }

@@ -4,8 +4,14 @@ import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import { estGrandeEntreprise } from "@/lib/franceTravail";
 import VilleListe from "@/components/ville/VilleListe";
-import { imageIllustration } from "@/lib/imagesThemes";
-import HeaderHorloge from "@/components/ville/HeaderHorloge";
+import { imageIllustration, themeDeOffre } from "@/lib/imagesThemes";
+import { Logo, LogoFranceTravail } from "@/components/borne/BorneComposants";
+import {
+  capitaliser,
+  champsAffichage,
+  initiales,
+  nettoyerLieu,
+} from "@/components/borne/borneUtils";
 import {
   IconeMallette,
   IconePin,
@@ -13,10 +19,7 @@ import {
   IconeEtoile,
   IconeDocument,
   IconePiece,
-  IconeGlobe,
-  IconeAccessibilite,
   IconeChevron,
-  IconeBlason,
 } from "@/components/icones/Icones";
 import type { OffreAffichee } from "@/lib/types";
 
@@ -38,32 +41,17 @@ export async function generateMetadata({
   if (!ville) return {};
 
   return {
-    title: `Offres d'emploi à ${ville.nom} — Ici on recrute`,
-    description: `Toutes les offres d'emploi locales à ${ville.nom} : offres France Travail et offres des commerçants du coin.`,
+    title: `Offres d'emploi à ${capitaliser(ville.nom)} — Ici on recrute`,
+    description: `Toutes les offres d'emploi locales à ${capitaliser(ville.nom)} : offres France Travail et offres des commerçants du coin.`,
   };
 }
 
-function champsOffre(offre: OffreAffichee) {
-  if (offre.source === "commercant") {
-    return {
-      titre: offre.poste,
-      sousTitre: offre.nom_commerce,
-      lieu: offre.quartier,
-      contrat: offre.type_contrat,
-      photo: offre.image_url,
-      logo: null as string | null,
-      description: offre.description,
-    };
-  }
-  return {
-    titre: offre.intitule,
-    sousTitre: offre.entreprise_nom,
-    lieu: offre.lieu_travail,
-    contrat: offre.type_contrat,
-    photo: null as string | null,
-    logo: offre.entreprise_logo_url,
-    description: offre.description,
-  };
+const TEINTES = ["#0F1A45", "#0E8A4A", "#2B3BE0", "#8A4200", "#7A2E6E", "#3B4152"];
+
+function teinte(texte: string) {
+  let h = 0;
+  for (let i = 0; i < texte.length; i++) h = (h * 31 + texte.charCodeAt(i)) >>> 0;
+  return TEINTES[h % TEINTES.length];
 }
 
 export default async function VillePage({
@@ -76,7 +64,7 @@ export default async function VillePage({
 
   const { data: ville } = await supabase
     .from("villes")
-    .select("id, nom, slug, logo_url, photo_hero_url")
+    .select("id, nom, slug, code_postal, logo_url, photo_hero_url")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -114,9 +102,8 @@ export default async function VillePage({
     ...offresFranceTravailAffichees,
   ];
 
-  const utilisePexels = (offresCommercants ?? []).some(
-    (o) => o.image_source === "pexels"
-  );
+  const villeAffichee = capitaliser(ville.nom);
+  const departement = String(ville.code_postal ?? "").slice(0, 2) || undefined;
 
   // Offre à la une : grande entreprise abonnée en priorité, sinon une grande
   // entreprise France Travail, sinon la première offre disponible.
@@ -127,182 +114,221 @@ export default async function VillePage({
     (o) => o.source === "france_travail" && estGrandeEntreprise(o.tranche_effectif)
   );
   const offreVedette = entreprisesPayantes[0] ?? grandesEntreprisesFT[0] ?? offres[0];
-  const vedette = offreVedette ? champsOffre(offreVedette) : null;
+  const vedette = offreVedette ? champsAffichage(offreVedette) : null;
+
+  const utilisePexels = (offresCommercants ?? []).some((o) => o.image_source === "pexels");
+  const nomVedette = vedette ? vedette.sousTitre || vedette.titre : "";
+  const aPhotoVedette = Boolean(vedette?.imageUrl && !vedette.estLogo);
+  const aLogoVedette = Boolean(vedette?.imageUrl && vedette.estLogo);
+  // Une photo d'illustration seulement quand le métier est reconnu ; sinon l'initiale de l'entreprise.
   const illustrationVedette =
-    vedette && offreVedette && !vedette.photo && !vedette.logo
+    vedette && offreVedette && !aPhotoVedette && !aLogoVedette &&
+    themeDeOffre(vedette.titre, vedette.sousTitre) !== "general"
       ? imageIllustration(vedette.titre, vedette.sousTitre, offreVedette.id)
       : null;
+  const lieuVedette = vedette ? nettoyerLieu(vedette.lieu, departement) : null;
 
   return (
-    <div className="min-h-screen bg-fond text-texte flex flex-col">
-      <header className="flex items-center justify-between px-6 py-5 max-w-5xl mx-auto w-full">
-        <div>
-          <p className="font-title text-xl font-black leading-none">
-            ICI <span className="text-vert">✌</span>
-            <br />
-            ON RECRUTE
-          </p>
-          <p className="text-xs opacity-60 mt-1">Les emplois près de chez vous</p>
-        </div>
-        <div className="flex items-center gap-6">
-          {ville.logo_url && (
-            <div className="hidden sm:flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={ville.logo_url} alt={`Blason de ${ville.nom}`} className="h-12 w-auto max-w-[96px] object-contain" />
-              <span className="font-title text-lg font-bold">{ville.nom}</span>
-            </div>
+    <div className="flex min-h-screen flex-col bg-[#F7F5F0] text-[#0F1A45]">
+      <div className="relative">
+        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+          {ville.photo_hero_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${ville.photo_hero_url})`,
+                filter: "brightness(1.08) saturate(1.1)",
+              }}
+            />
+          ) : (
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(180deg, #dbeafe, #F7F5F0)" }}
+            />
           )}
-          <HeaderHorloge />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(247,245,240,0.25) 0%, rgba(247,245,240,0.4) 50%, #F7F5F0 95%)",
+            }}
+          />
         </div>
-      </header>
 
-      <section
-        className="relative px-6 pt-10 pb-24 overflow-hidden"
-        style={
-          ville.photo_hero_url
-            ? {
-                backgroundImage: `linear-gradient(180deg, rgba(241,245,249,0.55), var(--color-fond) 92%), url(${ville.photo_hero_url})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : {
-                background:
-                  "linear-gradient(180deg, #dbeafe, var(--color-fond) 92%)",
-              }
-        }
-      >
-        <div className="max-w-5xl mx-auto">
-          <h1 className="font-title text-4xl sm:text-5xl font-black leading-tight">
+        <header className="relative z-10 mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:h-20 sm:px-6">
+          <span className="sm:hidden">
+            <Logo taille={22} />
+          </span>
+          <span className="hidden sm:block">
+            <Logo taille={30} />
+          </span>
+          {ville.logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={ville.logo_url}
+              alt={`Logo de ${villeAffichee}`}
+              className="h-9 w-auto max-w-[130px] object-contain sm:h-12 sm:max-w-[170px]"
+            />
+          )}
+        </header>
+
+        <section className="relative z-10 mx-auto w-full max-w-[1120px] px-5 pb-20 pt-4 sm:px-6 sm:pb-24 sm:pt-10">
+          <h1 className="font-title text-[44px] font-extrabold leading-[1.02] tracking-tight sm:text-[88px]">
             Trouvez un emploi
             <br />
-            <span className="text-jaune">à {ville.nom}</span>
+            <span className="text-[#0E8A4A]">à {villeAffichee}</span>
           </h1>
-        </div>
 
-        <div className="max-w-5xl mx-auto mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatPill Icone={IconeMallette} texte="Des offres locales et à jour" />
-          <StatPill Icone={IconePin} texte="Tous les secteurs d'activité" />
-          <StatPill Icone={IconeGroupe} texte="CDI, CDD, Intérim, Alternance" />
-        </div>
-      </section>
+          <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-3">
+            <Pastille Icone={IconeMallette} texte="Des offres locales et à jour" />
+            <Pastille Icone={IconePin} texte="Tous les secteurs d'activité" />
+            <Pastille Icone={IconeGroupe} texte="CDI, CDD, Intérim, Alternance" />
+          </div>
+        </section>
+      </div>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 -mt-14 flex flex-col gap-8 pb-16">
-        {vedette && (
-          <div className="bg-white rounded-2xl shadow-xl shadow-black/5 border border-black/5 overflow-hidden grid sm:grid-cols-2">
-            <div className="relative min-h-[180px] bg-vert/90 flex items-center justify-center">
-              {vedette.photo ? (
+      <main className="relative z-20 mx-auto -mt-14 flex w-full max-w-[1120px] flex-1 flex-col gap-6 px-5 pb-12 sm:px-6">
+        {vedette && offreVedette && (
+          <div className="grid overflow-hidden rounded-[24px] bg-white shadow-[0_24px_60px_rgba(15,26,69,0.18)] sm:grid-cols-2">
+            <div
+              className="relative flex aspect-video items-center justify-center sm:aspect-auto sm:min-h-[280px]"
+              style={{ background: "#F1F4F9" }}
+            >
+              {aPhotoVedette ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={vedette.photo} alt="" className="w-full h-full object-cover" />
-              ) : vedette.logo ? (
-                <div className="bg-white rounded-xl p-4 m-6">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={vedette.logo} alt="" className="max-h-20 object-contain" />
-                </div>
+                <img src={vedette.imageUrl!} alt="" className="h-full w-full object-cover" />
+              ) : aLogoVedette ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={vedette.imageUrl!}
+                  alt={vedette.imageAlt}
+                  className="object-contain"
+                  style={{ width: "70%", maxHeight: "70%" }}
+                />
               ) : illustrationVedette ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={illustrationVedette.url} alt="" className="w-full h-full object-cover" />
+                <img src={illustrationVedette.url} alt="" className="h-full w-full object-cover" />
               ) : (
-                <IconeMallette className="w-16 h-16 text-white/70" />
+                <span
+                  className="font-title flex h-24 w-24 items-center justify-center rounded-[24px] text-5xl font-bold text-white"
+                  style={{ background: teinte(nomVedette) }}
+                >
+                  {initiales(nomVedette).charAt(0)}
+                </span>
               )}
-              <span className="absolute top-4 left-4 flex items-center gap-1 bg-texte/90 text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                <IconeEtoile className="w-3.5 h-3.5 text-jaune" />
+              <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#0F1A45] px-3 py-1.5 text-sm font-bold text-white">
+                <IconeEtoile className="h-3.5 w-3.5 text-[#0E8A4A]" />
                 OFFRE À LA UNE
               </span>
             </div>
-            <div className="p-6 flex flex-col gap-3">
+            <div className="flex flex-col gap-3 p-5 sm:p-6">
               {vedette.sousTitre && (
-                <p className="font-bold text-sm opacity-70">{vedette.sousTitre}</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-[#545A6B]">
+                  {vedette.sousTitre}
+                </p>
               )}
-              <h2 className="font-title text-2xl font-bold leading-tight">
+              <h2 className="font-title text-[28px] font-bold leading-tight sm:text-3xl">
                 {vedette.titre}
               </h2>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm opacity-70">
-                {vedette.lieu && (
-                  <span className="flex items-center gap-1">
-                    <IconePin className="w-4 h-4" /> {vedette.lieu}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[15px] text-[#3B4152]">
+                {lieuVedette && (
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    <IconePin className="h-4 w-4" /> {lieuVedette}
                   </span>
                 )}
-                {vedette.contrat && (
-                  <span className="flex items-center gap-1">
-                    <IconeDocument className="w-4 h-4" /> {vedette.contrat}
+                {vedette.contratNom && (
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    <IconeDocument className="h-4 w-4" />{" "}
+                    {[vedette.contratNom, vedette.contratDuree].filter(Boolean).join(" · ")}
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <IconePiece className="w-4 h-4" /> Selon profil
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <IconePiece className="h-4 w-4" /> Selon profil
                 </span>
               </div>
               {vedette.description && (
-                <p className="text-sm opacity-80 line-clamp-2">
-                  {vedette.description}
-                </p>
+                <p className="line-clamp-2 text-sm text-[#3B4152]">{vedette.description}</p>
               )}
               <Link
-                href={`/ville/${ville.slug}/offres/${offreVedette!.id}`}
-                className="mt-2 inline-flex items-center justify-center gap-2 bg-vert text-white font-bold rounded-xl px-6 py-3 shadow-lg shadow-vert/20 hover:-translate-y-0.5"
+                href={`/ville/${ville.slug}/offres/${offreVedette.id}`}
+                className="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#2B3BE0] text-lg font-bold text-white shadow-lg shadow-[#2B3BE0]/20"
               >
-                Voir l&apos;offre <IconeChevron className="w-4 h-4" />
+                Voir l&apos;offre <IconeChevron className="h-4 w-4" />
               </Link>
             </div>
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p>
-            <span className="font-title text-4xl font-black text-jaune">
+        <div className="flex flex-col items-start gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-title text-[56px] font-extrabold leading-none tracking-tight text-[#0E8A4A]">
               {offres.length}
-            </span>{" "}
-            <span className="font-bold">offres disponibles aujourd&apos;hui</span>
-          </p>
+            </span>
+            <div className="flex flex-col gap-1">
+              <span className="text-xl font-bold leading-tight">
+                offres disponibles
+                <br />
+                aujourd&apos;hui
+              </span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-[#0E8A4A]">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="bc-ping absolute inset-0 rounded-full bg-[#0E8A4A]" />
+                  <span className="relative h-2.5 w-2.5 rounded-full bg-[#0E8A4A]" />
+                </span>
+                en direct
+              </span>
+            </div>
+          </div>
           <a
             href="#offres"
-            className="flex items-center gap-1 border-2 border-vert text-vert font-bold rounded-full px-5 py-2.5 hover:bg-vert hover:text-white"
+            className="flex h-12 items-center gap-1 rounded-full border-2 border-[#2B3BE0] bg-white px-5 font-bold text-[#2B3BE0]"
           >
-            Voir toutes les offres <IconeChevron className="w-4 h-4" />
+            Voir toutes les offres <IconeChevron className="h-4 w-4" />
           </a>
         </div>
 
-        <VilleListe offres={offres} villeSlug={ville.slug} />
+        <VilleListe offres={offres} villeSlug={ville.slug} departement={departement} />
 
-        <Link
-          href="/commercant"
-          className="block bg-jaune text-texte rounded-xl px-6 py-4 font-bold text-center shadow-lg shadow-jaune/20 hover:shadow-xl hover:-translate-y-0.5"
-        >
-          Vous recrutez ? Publier une offre
-        </Link>
+        <section className="rounded-[28px] bg-[#0F1A45] px-6 py-8 text-center text-white sm:px-10 sm:py-10">
+          <h2 className="font-title text-2xl font-bold">Vous recrutez à {villeAffichee} ?</h2>
+          <Link
+            href="/commercant"
+            className="mt-5 inline-flex h-[52px] items-center justify-center rounded-xl bg-[#0E8A4A] px-8 text-lg font-bold text-white"
+          >
+            Publier une offre
+          </Link>
+        </section>
       </main>
 
-      <footer className="border-t border-black/5 bg-white">
-        <div className="max-w-5xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-sm">
-          <p className="flex items-center gap-2 opacity-80">
+      <footer className="border-t border-[#E4E0D6] bg-white">
+        <div className="mx-auto flex w-full max-w-[1120px] items-end justify-between gap-4 px-5 py-6 sm:px-6">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm text-[#3B4152]">Une initiative de votre ville</span>
             {ville.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={ville.logo_url} alt="" className="h-10 w-auto max-w-[80px] object-contain" />
+              <img
+                src={ville.logo_url}
+                alt={`Logo de ${villeAffichee}`}
+                className="h-12 w-auto max-w-[180px] object-contain object-left"
+              />
             ) : (
-              <IconeBlason className="w-5 h-5 text-vert" />
+              <span className="font-title text-2xl font-bold">{villeAffichee}</span>
             )}
-            Une initiative de votre ville — {ville.nom}
-          </p>
-          <p className="opacity-60">En partenariat avec France Travail</p>
-          <div className="flex gap-2">
-            <span className="flex items-center gap-1 border border-black/10 rounded-full px-3 py-1.5 opacity-70">
-              <IconeGlobe className="w-4 h-4" /> Français
-            </span>
-            <span className="flex items-center gap-1 border border-black/10 rounded-full px-3 py-1.5 opacity-70">
-              <IconeAccessibilite className="w-4 h-4" /> Accessibilité
-            </span>
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-sm text-[#3B4152]">En partenariat avec</span>
+            <LogoFranceTravail />
           </div>
         </div>
         {(utilisePexels || illustrationVedette) && (
-          <p className="text-center text-xs opacity-50 pb-4">
-            Photos d&apos;illustration : Pexels
-          </p>
+          <p className="pb-4 text-center text-sm text-[#545A6B]">Photos d&apos;illustration : Pexels</p>
         )}
       </footer>
     </div>
   );
 }
 
-function StatPill({
+function Pastille({
   Icone,
   texte,
 }: {
@@ -310,9 +336,9 @@ function StatPill({
   texte: string;
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-md shadow-black/5 border border-black/5 px-4 py-3 flex items-center gap-3">
-      <span className="shrink-0 w-9 h-9 rounded-full bg-vert/10 text-vert flex items-center justify-center">
-        <Icone className="w-4.5 h-4.5" />
+    <div className="flex flex-col items-center gap-1.5 text-center sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:border-[#E4E0D6] sm:bg-white sm:px-4 sm:py-3 sm:text-left sm:shadow-md sm:shadow-black/5">
+      <span className="flex shrink-0 items-center justify-center text-[#2B3BE0] sm:h-10 sm:w-10 sm:rounded-full sm:bg-[#2B3BE0]/10">
+        <Icone className="h-8 w-8 sm:h-5 sm:w-5" />
       </span>
       <p className="text-sm font-bold leading-snug">{texte}</p>
     </div>

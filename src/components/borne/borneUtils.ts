@@ -65,6 +65,18 @@ export function capitaliser(nom: string) {
     .replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, l: string) => sep + l.toUpperCase());
 }
 
+// « 51 - REIMS » devient « Reims » ; le département n'est gardé que hors du département de la ville.
+export function nettoyerLieu(lieu: string | null, departementVille?: string) {
+  if (!lieu) return null;
+  const m = lieu.match(/^\s*(\d{2,3})\s*-\s*(.+)$/);
+  const dept = m ? m[1] : null;
+  let commune = (m ? m[2] : lieu).trim();
+  const lettres = commune.replace(/[^\p{L}]/gu, "");
+  if (lettres.length > 1 && lettres === lettres.toUpperCase()) commune = capitaliser(commune);
+  if (dept && departementVille && dept !== departementVille) return `${commune} (${dept})`;
+  return commune;
+}
+
 export function masquerEmail(email: string) {
   const [local, domaine] = email.split("@");
   if (!domaine) return email;
