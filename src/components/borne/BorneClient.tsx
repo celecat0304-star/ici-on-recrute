@@ -600,7 +600,7 @@ export default function BorneClient({
                 {compteur}
               </span>
               <div className="flex flex-col gap-1.5">
-                <span className="d font-bold" style={{ fontSize: 34, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
+                <span className="d font-bold" style={{ fontSize: 36, lineHeight: 1.05, letterSpacing: "-0.02em" }}>
                   offres disponibles
                   <br />
                   aujourd’hui
@@ -659,13 +659,17 @@ export default function BorneClient({
           {colonnes.length > 0 && (
             <section className="flex flex-col gap-3">
               <h2 className="text-[26px] font-bold text-[#545A6B]">Ils recrutent aussi à {villeAffichee}</h2>
-              <div
-                className="bc-defilant -mx-12 overflow-hidden pb-1"
-                style={{
-                  WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 90px, #000 990px, transparent 1080px)",
-                  maskImage: "linear-gradient(90deg, transparent 0, #000 90px, #000 990px, transparent 1080px)",
-                }}
-              >
+              <div className="bc-defilant relative -mx-12 overflow-hidden pb-1">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-0 z-10"
+                  style={{ width: 60, background: "linear-gradient(90deg, #F7F5F0 0%, rgba(247,245,240,0) 100%)" }}
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-0 z-10"
+                  style={{ width: 60, background: "linear-gradient(270deg, #F7F5F0 0%, rgba(247,245,240,0) 100%)" }}
+                />
                 <div
                   className="bc-piste flex w-max"
                   style={{ marginLeft: 48, animationDuration: `${colonnes.length * 32}s` }}
