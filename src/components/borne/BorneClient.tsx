@@ -436,9 +436,6 @@ export default function BorneClient({
                               alt=""
                               className="h-full w-full object-cover"
                             />
-                            <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-[15px] text-white">
-                              Photo d’illustration · Pexels
-                            </span>
                           </>
                         )}
                         <span className="absolute left-5 top-5 flex h-12 items-center gap-2.5 rounded-full border-2 border-white/60 bg-[#0F1A45] pl-4 pr-5 text-[21px] font-bold text-white" style={{ letterSpacing: "0.04em" }}>
@@ -640,9 +637,12 @@ export default function BorneClient({
               <span className="d text-[30px] font-bold">{villeAffichee}</span>
             </div>
           </div>
-          <div className="flex grow items-center justify-end gap-3.5">
-            <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
-            <LogoFranceTravail />
+          <div className="flex grow flex-col items-end gap-1">
+            <div className="flex items-center gap-3.5">
+              <span className="text-[19px] text-[#3B4152]">En partenariat avec</span>
+              <LogoFranceTravail />
+            </div>
+            <span className="text-[14px] text-[#8A867B]">Photos d’illustration : Pexels</span>
           </div>
         </footer>
       </>
@@ -1024,11 +1024,6 @@ export default function BorneClient({
               alt=""
               className="h-full w-full object-cover"
             />
-            {!(infos.imageUrl && !infos.estLogo) && (
-              <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-[16px] text-white">
-                Photo d’illustration · Pexels
-              </span>
-            )}
           </div>
 
           <div className="flex flex-col gap-[18px]">

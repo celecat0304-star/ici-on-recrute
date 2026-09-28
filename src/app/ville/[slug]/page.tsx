@@ -204,11 +204,6 @@ export default async function VillePage({
               ) : (
                 <IconeMallette className="w-16 h-16 text-white/70" />
               )}
-              {illustrationVedette && (
-                <span className="absolute bottom-3 left-4 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
-                  Photo d&apos;illustration · Pexels
-                </span>
-              )}
               <span className="absolute top-4 left-4 flex items-center gap-1 bg-texte/90 text-white text-xs font-bold px-3 py-1.5 rounded-full">
                 <IconeEtoile className="w-3.5 h-3.5 text-jaune" />
                 OFFRE À LA UNE
@@ -297,9 +292,9 @@ export default async function VillePage({
             </span>
           </div>
         </div>
-        {utilisePexels && (
+        {(utilisePexels || illustrationVedette) && (
           <p className="text-center text-xs opacity-50 pb-4">
-            Photos fournies par Pexels
+            Photos d&apos;illustration : Pexels
           </p>
         )}
       </footer>

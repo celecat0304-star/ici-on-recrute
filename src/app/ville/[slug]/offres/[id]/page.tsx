@@ -154,14 +154,6 @@ export default async function OffreDetailPage({
             <IconeMallette className="w-16 h-16 text-white/70" />
           )}
         </div>
-        {illustration && (
-          <p className="text-xs opacity-50 -mt-3">
-            Photo d&apos;illustration :{" "}
-            <a href={illustration.lienPexels} target="_blank" rel="noopener noreferrer" className="underline">
-              {illustration.photographe} / Pexels
-            </a>
-          </p>
-        )}
         {source === "commercant" &&
           offre.image_source === "pexels" &&
           offre.pexels_photographe && (
@@ -224,6 +216,7 @@ export default async function OffreDetailPage({
 
         <p className="text-sm opacity-50">
           Source : {source === "commercant" ? "Commerçant du coin" : "France Travail"}
+          {illustration && " · Photo d’illustration : Pexels"}
         </p>
       </main>
     </div>
