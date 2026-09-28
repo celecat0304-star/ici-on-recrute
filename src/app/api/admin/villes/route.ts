@@ -3,7 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slugify";
 
 export async function POST(request: NextRequest) {
-  const { nom, codePostal, codeInsee, rayonRechercheKm } = await request.json();
+  const { nom, codePostal, codeInsee, rayonRechercheKm, photoHeroUrl } =
+    await request.json();
 
   if (!nom || !codePostal) {
     return NextResponse.json(
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
     code_postal: codePostal,
     code_insee: codeInsee || null,
     rayon_recherche_km: rayonRechercheKm ? Number(rayonRechercheKm) : 10,
+    photo_hero_url: photoHeroUrl || null,
   });
 
   if (error) {

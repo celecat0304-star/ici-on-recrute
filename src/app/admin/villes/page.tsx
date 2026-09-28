@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
+import AdminNav from "@/components/admin/AdminNav";
 import VillesManager, {
   type VilleAvecDetails,
 } from "@/components/admin/VillesManager";
@@ -13,7 +12,7 @@ export default async function AdminVillesPage() {
   const { data } = await supabase
     .from("villes")
     .select(
-      "id, nom, slug, code_postal, code_insee, rayon_recherche_km, bornes ( id, nom, lieu ), comptes_mairie ( id )"
+      "id, nom, slug, code_postal, code_insee, rayon_recherche_km, photo_hero_url, bornes ( id, nom, lieu ), comptes_mairie ( id )"
     )
     .order("nom", { ascending: true });
 
@@ -24,6 +23,7 @@ export default async function AdminVillesPage() {
     code_postal: v.code_postal,
     code_insee: v.code_insee,
     rayon_recherche_km: v.rayon_recherche_km,
+    photo_hero_url: v.photo_hero_url,
     bornes: v.bornes ?? [],
     aUnCompteMairie: (v.comptes_mairie ?? []).length > 0,
   }));
@@ -33,15 +33,7 @@ export default async function AdminVillesPage() {
       <div className="max-w-3xl mx-auto flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-title text-3xl font-bold">Villes et bornes</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/admin" className="underline">
-              À valider
-            </Link>
-            <Link href="/admin/statistiques" className="underline">
-              Statistiques
-            </Link>
-            <AdminLogoutButton />
-          </div>
+          <AdminNav />
         </div>
         <VillesManager villes={villes} />
       </div>

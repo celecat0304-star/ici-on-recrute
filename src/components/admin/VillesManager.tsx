@@ -10,6 +10,7 @@ export type VilleAvecDetails = {
   code_postal: string;
   code_insee: string | null;
   rayon_recherche_km: number;
+  photo_hero_url: string | null;
   bornes: { id: string; nom: string; lieu: string }[];
   aUnCompteMairie: boolean;
 };
@@ -49,6 +50,7 @@ function NouvelleVille() {
         codePostal: donnees.get("codePostal"),
         codeInsee: donnees.get("codeInsee"),
         rayonRechercheKm: donnees.get("rayonRechercheKm"),
+        photoHeroUrl: donnees.get("photoHeroUrl"),
       }),
     });
     setEnvoi(false);
@@ -77,6 +79,11 @@ function NouvelleVille() {
           placeholder="Rayon de recherche (km)"
           defaultValue={10}
           className="input"
+        />
+        <input
+          name="photoHeroUrl"
+          placeholder="URL photo de bannière (optionnel)"
+          className="input col-span-2"
         />
       </div>
       {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
@@ -111,6 +118,19 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
   const [erreur, setErreur] = useState("");
   const [syncEnCours, setSyncEnCours] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [photoHero, setPhotoHero] = useState(ville.photo_hero_url ?? "");
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
+
+  const enregistrerPhotoHero = async () => {
+    setEnvoiPhoto(true);
+    await fetch(`/api/admin/villes/${ville.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photoHeroUrl: photoHero }),
+    });
+    setEnvoiPhoto(false);
+    router.refresh();
+  };
 
   const synchroniser = async () => {
     setErreur("");
@@ -192,6 +212,22 @@ function VilleCarte({ ville }: { ville: VilleAvecDetails }) {
         {" · rayon "}
         {ville.rayon_recherche_km} km
       </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={photoHero}
+          onChange={(e) => setPhotoHero(e.target.value)}
+          placeholder="URL photo de bannière du site public"
+          className="input flex-1 min-w-[200px]"
+        />
+        <button
+          onClick={enregistrerPhotoHero}
+          disabled={envoiPhoto}
+          className="min-h-[40px] px-4 rounded-lg border-2 border-vert text-vert font-bold text-sm"
+        >
+          Enregistrer
+        </button>
+      </div>
 
       {ville.code_insee && (
         <div className="flex items-center gap-3">
