@@ -48,6 +48,72 @@ button:active {
   transform: scale(0.98);
 }
 
+.borne {
+  font-family: var(--font-atkinson), system-ui, sans-serif;
+  color: #0f1a45;
+  -webkit-font-smoothing: antialiased;
+}
+.borne h1,
+.borne h2,
+.borne h3,
+.borne .d {
+  font-family: var(--font-instrument), system-ui, sans-serif;
+  margin: 0;
+}
+.borne p {
+  margin: 0;
+}
+.borne button {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bc-carte {
+  background: #fff;
+  box-shadow: 0 1px 0 #e4e0d6, 0 6px 18px rgba(15, 26, 69, 0.05);
+}
+.bc-anneau {
+  box-shadow: inset 0 0 0 2px #e4e0d6;
+}
+.bc-vert {
+  background: #0e8a4a;
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(14, 138, 74, 0.25);
+}
+@keyframes bc-defilement {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.bc-piste {
+  animation: bc-defilement linear infinite;
+}
+.bc-defilant:active .bc-piste {
+  animation-play-state: paused;
+}
+.bc-fondu {
+  transition: opacity 0.5s ease;
+}
+@keyframes bc-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes bc-trace {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes bc-halo {
+  from { transform: scale(1); opacity: 0.45; }
+  to { transform: scale(1.5); opacity: 0; }
+}
+.bc-pop { animation: bc-pop 0.52s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bc-trace { stroke-dasharray: 24; animation: bc-trace 0.42s 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bc-halo { animation: bc-halo 1.4s 0.5s ease-out 2 both; }
+@media (prefers-reduced-motion: reduce) {
+  .bc-piste { animation-duration: 200s; }
+  .bc-fondu, .bc-pop, .bc-trace, .bc-halo { transition: none; animation: none; }
+}
+
 :focus-visible {
   outline: 3px solid var(--color-vert);
   outline-offset: 2px;
