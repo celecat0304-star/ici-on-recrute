@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { OffreAffichee } from "@/lib/types";
-import { BarreNav, Clavier, EnTete, Ic, Logo, LogoFranceTravail, Scene } from "./BorneComposants";
+import { BarreNav, Clavier, EnTete, Ic, Logo, LogoFranceTravail, Scene, Vignette } from "./BorneComposants";
 import { imageIllustration } from "@/lib/imagesThemes";
 import {
   CONTRATS,
@@ -570,17 +570,14 @@ export default function BorneClient({
                             onClick={() => ouvrirOffreDepuisAccueil(o)}
                             className="bc-carte box-border flex h-36 items-center gap-4 rounded-3xl pl-[18px] pr-4"
                           >
-                            <span
-                              className="d flex h-[92px] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-[18px] text-[28px] font-bold text-white"
-                              style={{ background: c.imageUrl && c.estLogo ? "#FFFFFF" : couleurAvatar(c.sousTitre || c.titre), boxShadow: c.imageUrl && c.estLogo ? "inset 0 0 0 2px #E4E0D6" : undefined }}
-                            >
-                              {c.imageUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={c.imageUrl} alt="" className="h-full w-full object-contain p-1.5" />
-                              ) : (
-                                initiales(c.sousTitre || c.titre)
-                              )}
-                            </span>
+                            <Vignette
+                              titre={c.titre}
+                              sousTitre={c.sousTitre}
+                              imageUrl={c.imageUrl}
+                              estLogo={c.estLogo}
+                              cle={o.id}
+                              className="h-[92px] w-[92px] rounded-[18px]"
+                            />
                             <span className="flex min-w-0 grow flex-col gap-[3px]">
                               <span className="line-clamp-2 text-[23px] font-bold" style={{ lineHeight: 1.15 }}>
                                 {c.titre}
@@ -629,13 +626,12 @@ export default function BorneClient({
         <footer className="flex h-[124px] shrink-0 items-center gap-5 px-12">
           <div className="flex flex-col gap-1.5">
             <span className="text-[19px] text-[#3B4152]">Une initiative de votre ville</span>
-            <div className="flex items-center gap-3">
-              {villeLogoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={villeLogoUrl} alt={`Logo de ${villeAffichee}`} className="h-[56px] w-auto max-w-[200px] object-contain" />
-              )}
+            {villeLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={villeLogoUrl} alt={`Logo de ${villeAffichee}`} className="h-[64px] w-auto max-w-[240px] object-contain object-left" />
+            ) : (
               <span className="d text-[30px] font-bold">{villeAffichee}</span>
-            </div>
+            )}
           </div>
           <div className="flex grow flex-col items-end gap-1">
             <div className="flex items-center gap-3.5">
@@ -877,17 +873,14 @@ export default function BorneClient({
                       onClick={() => ouvrirDetail(o)}
                       className="box-border flex h-[190px] min-w-0 grow items-center gap-5 pl-[22px] pr-3"
                     >
-                      <span
-                        className="d flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[20px] text-[30px] font-bold text-white"
-                        style={{ background: c.imageUrl && c.estLogo ? "#FFFFFF" : couleurAvatar(c.sousTitre || c.titre), boxShadow: c.imageUrl && c.estLogo ? "inset 0 0 0 2px #E4E0D6" : undefined }}
-                      >
-                        {c.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.imageUrl} alt="" className={"h-full w-full p-1.5 " + (c.estLogo ? "object-contain" : "object-cover !p-0")} />
-                        ) : (
-                          initiales(c.sousTitre || c.titre)
-                        )}
-                      </span>
+                      <Vignette
+                        titre={c.titre}
+                        sousTitre={c.sousTitre}
+                        imageUrl={c.imageUrl}
+                        estLogo={c.estLogo}
+                        cle={o.id}
+                        className="h-24 w-24 rounded-[20px]"
+                      />
                       <span className="flex min-w-0 grow flex-col gap-1">
                         <span className="flex items-center gap-3">
                           <span className="d line-clamp-2 text-[30px] font-bold" style={{ lineHeight: 1.12, letterSpacing: "-0.015em" }}>
@@ -1193,17 +1186,14 @@ export default function BorneClient({
                 const c = champsAffichage(o);
                 return (
                   <li key={`${o.source}-${o.id}`} className="flex h-24 items-center gap-4 border-b-2 border-[#F1EEE6] pl-5 pr-3">
-                    <span
-                      className="d flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] text-xl font-bold text-white"
-                      style={{ background: c.imageUrl && c.estLogo ? "#FFFFFF" : couleurAvatar(c.sousTitre || c.titre), boxShadow: c.imageUrl && c.estLogo ? "inset 0 0 0 2px #E4E0D6" : undefined }}
-                    >
-                      {c.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.imageUrl} alt="" className={"h-full w-full " + (c.estLogo ? "object-contain p-1" : "object-cover")} />
-                      ) : (
-                        initiales(c.sousTitre || c.titre)
-                      )}
-                    </span>
+                    <Vignette
+                      titre={c.titre}
+                      sousTitre={c.sousTitre}
+                      imageUrl={c.imageUrl}
+                      estLogo={c.estLogo}
+                      cle={o.id}
+                      className="h-[60px] w-[60px] rounded-[14px]"
+                    />
                     <span className="flex min-w-0 grow flex-col gap-0.5">
                       <span className="truncate text-[25px] font-bold">{c.titre}</span>
                       <span className="flex items-center gap-2 text-[21px] text-[#545A6B]">

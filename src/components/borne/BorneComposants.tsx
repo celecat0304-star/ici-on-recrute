@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { imageIllustration } from "@/lib/imagesThemes";
 
 const ICONES = {
   coeur: <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />,
@@ -128,6 +129,42 @@ export function Ic({
   );
 }
 
+// Vignette d'une offre : logo de l'entreprise, sinon sa photo, sinon une photo d'illustration du métier.
+export function Vignette({
+  titre,
+  sousTitre,
+  imageUrl,
+  estLogo,
+  cle,
+  className,
+}: {
+  titre: string;
+  sousTitre: string | null;
+  imageUrl: string | null;
+  estLogo: boolean;
+  cle: string;
+  className: string;
+}) {
+  if (imageUrl && estLogo) {
+    return (
+      <span className={`flex shrink-0 items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_2px_#E4E0D6] ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt="" className="h-full w-full object-contain p-1.5" />
+      </span>
+    );
+  }
+  return (
+    <span className={`flex shrink-0 overflow-hidden bg-[#DDE3EA] ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl ?? imageIllustration(titre, sousTitre, cle).url}
+        alt=""
+        className="h-full w-full object-cover"
+      />
+    </span>
+  );
+}
+
 // Le fichier /logo-france-travail.png est à déposer dans le dossier public/ ;
 // tant qu'il est absent, le nom en texte s'affiche à la place.
 export function LogoFranceTravail() {
@@ -239,11 +276,12 @@ export function EnTete({
       </button>
       {ville && (
         <div className="flex min-w-0 grow items-center justify-center gap-3">
-          {ville.logoUrl && (
+          {ville.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={ville.logoUrl} alt={`Blason de ${ville.nom}`} className="h-[64px] w-auto max-w-[120px] object-contain" />
+            <img src={ville.logoUrl} alt={ville.nom} className="h-[68px] w-auto max-w-[240px] object-contain" />
+          ) : (
+            <span className="d truncate text-[30px] font-bold text-[#0F1A45]">{ville.nom}</span>
           )}
-          <span className="d truncate text-[30px] font-bold text-[#0F1A45]">{ville.nom}</span>
         </div>
       )}
       {badge && (
