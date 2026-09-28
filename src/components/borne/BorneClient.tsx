@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { OffreAffichee } from "@/lib/types";
@@ -10,6 +11,8 @@ const SEUIL_GLISSEMENT_PX = 50;
 const DELAI_ENVOI_STATS_MS = 10_000;
 const DELAI_ROTATION_ATTENTE_MS = 12_000;
 const MAX_SELECTION = 10;
+const DELAI_MAX_ENTRE_APPUIS_MS = 1500;
+const APPUIS_POUR_SORTIE = 3;
 
 type Props = {
   borne: { id: string; nom: string; lieu: string };
@@ -44,6 +47,7 @@ function champsAffichage(offre: OffreAffichee) {
       description: offre.description,
       sourceLabel: "Commerçant du coin",
       imageUrl: offre.image_url,
+      imageAlt: `Photo de ${offre.nom_commerce}`,
       estLogo: false,
       creditPexels:
         offre.image_source === "pexels" ? offre.pexels_photographe : null,
@@ -59,6 +63,7 @@ function champsAffichage(offre: OffreAffichee) {
     description: offre.description,
     sourceLabel: "France Travail",
     imageUrl: offre.entreprise_logo_url,
+    imageAlt: offre.entreprise_nom ? `Logo de ${offre.entreprise_nom}` : "",
     estLogo: true,
     creditPexels: null as string | null,
     grandeEntreprise: false,
@@ -75,6 +80,7 @@ export default function BorneClient({
   caseB,
   offresCommercantsCount = 0,
 }: Props) {
+  const router = useRouter();
   const [mode, setMode] = useState<"attente" | "navigation">("attente");
   const [indexAttente, setIndexAttente] = useState(0);
   const [index, setIndex] = useState(0);
@@ -88,16 +94,33 @@ export default function BorneClient({
     email: string;
     lien: string;
   } | null>(null);
+  const [codeSortieOuvert, setCodeSortieOuvert] = useState(false);
+  const [codeSortieValeur, setCodeSortieValeur] = useState("");
+  const [codeSortieErreur, setCodeSortieErreur] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const evenementsEnAttente = useRef<EvenementStat[]>([]);
+  const appuisLogo = useRef<{ nombre: number; dernier: number }>({
+    nombre: 0,
+    dernier: 0,
+  });
   const supabase = useMemo(() => createPublicClient(), []);
 
   const offre = offres[index];
   const infos = offre ? champsAffichage(offre) : null;
   const estCommercant = offre?.source === "commercant";
   const offresFranceTravailCount = offres.length - offresCommercantsCount;
+
+  // Mode hors ligne : un service worker garde en cache la dernière version
+  // affichée avec succès, pour ne jamais montrer un écran d'erreur du navigateur.
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw-borne.js", { scope: "/borne/" })
+        .catch(() => {});
+    }
+  }, []);
 
   const estDansSelection = (o: OffreAffichee) =>
     selection.some((s) => s.source === o.source && s.id === o.id);
@@ -236,11 +259,38 @@ export default function BorneClient({
     touchStartX.current = null;
   };
 
+  const onTapLogo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const maintenant = Date.now();
+    if (maintenant - appuisLogo.current.dernier > DELAI_MAX_ENTRE_APPUIS_MS) {
+      appuisLogo.current.nombre = 0;
+    }
+    appuisLogo.current.nombre += 1;
+    appuisLogo.current.dernier = maintenant;
+    if (appuisLogo.current.nombre >= APPUIS_POUR_SORTIE) {
+      appuisLogo.current.nombre = 0;
+      setCodeSortieOuvert(true);
+      setCodeSortieValeur("");
+      setCodeSortieErreur(false);
+    }
+  };
+
+  const validerCodeSortie = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (codeSortieValeur === process.env.NEXT_PUBLIC_CODE_SORTIE_BORNE) {
+      router.push("/admin");
+    } else {
+      setCodeSortieErreur(true);
+    }
+  };
+
+  let contenu: React.ReactNode;
+
   if (mode === "attente") {
     const offreA = caseA.length > 0 ? caseA[indexAttente % caseA.length] : null;
     const offreB = caseB.length > 0 ? caseB[indexAttente % caseB.length] : null;
 
-    return (
+    contenu = (
       <div
         className="min-h-screen w-full flex flex-col items-center justify-center text-center gap-6 px-6 py-8 cursor-pointer text-texte"
         style={{
@@ -277,10 +327,8 @@ export default function BorneClient({
         </p>
       </div>
     );
-  }
-
-  if (!offre || !infos) {
-    return (
+  } else if (!offre || !infos) {
+    contenu = (
       <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
         <p className="text-2xl">Aucune offre disponible pour le moment.</p>
         <button
@@ -291,10 +339,8 @@ export default function BorneClient({
         </button>
       </div>
     );
-  }
-
-  if (panierConfirmation) {
-    return (
+  } else if (panierConfirmation) {
+    contenu = (
       <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
         <h2 className="font-title text-3xl font-bold text-vert">C&apos;est envoyé !</h2>
         <p className="text-xl max-w-md">
@@ -310,10 +356,8 @@ export default function BorneClient({
         </button>
       </div>
     );
-  }
-
-  if (emailFormOuvert) {
-    return (
+  } else if (emailFormOuvert) {
+    contenu = (
       <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-fond text-texte px-8 text-center">
         <h2 className="font-title text-3xl font-bold">Recevoir mes offres</h2>
         <p className="text-lg max-w-md opacity-80">
@@ -328,7 +372,11 @@ export default function BorneClient({
           }}
           className="flex flex-col gap-4 w-full max-w-sm"
         >
+          <label htmlFor="email-panier" className="sr-only">
+            Votre e-mail
+          </label>
           <input
+            id="email-panier"
             name="email"
             type="email"
             required
@@ -354,165 +402,226 @@ export default function BorneClient({
         </form>
       </div>
     );
+  } else {
+    contenu = (
+      <div
+        className="min-h-screen w-full flex flex-col bg-fond text-texte pb-24"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onClick={reinitialiserInactivite}
+      >
+        <header className="flex flex-wrap items-center gap-3 px-6 py-4">
+          <button
+            onClick={revenirAAttente}
+            className="min-h-[64px] px-6 rounded-xl border-2 border-vert text-vert text-lg font-bold shrink-0"
+            aria-label="Retour à l'accueil de la borne"
+          >
+            ← Accueil
+          </button>
+          <p className="text-lg font-bold truncate">
+            {villeNom} · {borne.lieu}
+          </p>
+        </header>
+
+        <main className="flex-1 flex flex-col items-center justify-center px-8 gap-6">
+          <div
+            className={
+              "w-full max-w-3xl p-10 flex flex-col gap-4 relative " +
+              (estCommercant
+                ? "bg-[#FFFDF3] rounded-lg shadow-xl border border-dashed border-vert/30 -rotate-1"
+                : "bg-white rounded-3xl shadow-xl shadow-black/5 border border-black/5")
+            }
+          >
+            {estCommercant && (
+              <span
+                className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-7 bg-jaune/90 rotate-2 shadow-sm"
+                aria-hidden="true"
+              />
+            )}
+
+            {infos.imageUrl && (
+              <div
+                className={
+                  infos.estLogo
+                    ? "w-full max-h-40 flex items-center justify-center bg-white rounded-xl p-4"
+                    : ""
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={infos.imageUrl}
+                  alt={infos.imageAlt}
+                  className={
+                    infos.estLogo
+                      ? "max-h-32 max-w-full object-contain"
+                      : "w-full max-h-64 object-cover rounded-xl"
+                  }
+                />
+                {infos.creditPexels && (
+                  <p className="text-sm opacity-60 mt-1">
+                    Photo : {infos.creditPexels} / Pexels
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {infos.contrat && (
+                <span className="bg-jaune text-texte font-bold px-4 py-2 rounded-full text-lg">
+                  {infos.contrat}
+                </span>
+              )}
+              {infos.grandeEntreprise && (
+                <span className="bg-vert text-white font-bold px-4 py-2 rounded-full text-lg">
+                  Offre à la une
+                </span>
+              )}
+            </div>
+            <h2 className="font-title text-4xl font-bold">{infos.titre}</h2>
+            {infos.sousTitre && <p className="text-2xl">{infos.sousTitre}</p>}
+            <p className="text-xl opacity-80">
+              {[infos.lieu, infos.tempsTravail].filter(Boolean).join(" · ")}
+            </p>
+
+            <button
+              onClick={() => {
+                if (!detailOuvert) enregistrerEvenement("interet");
+                setDetailOuvert(!detailOuvert);
+              }}
+              aria-expanded={detailOuvert}
+              className="self-start underline text-lg"
+            >
+              {detailOuvert ? "Réduire" : "En savoir plus"}
+            </button>
+
+            {detailOuvert && infos.description && (
+              <p className="text-xl mt-2 whitespace-pre-line">{infos.description}</p>
+            )}
+
+            {detailOuvert && estCommercant && offre.source === "commercant" && (
+              <p className="text-lg mt-1">
+                <strong>Comment postuler :</strong> {offre.comment_postuler}
+              </p>
+            )}
+
+            <p className="text-base opacity-60 mt-2">Source : {infos.sourceLabel}</p>
+
+            <button
+              onClick={toggleSelection}
+              aria-pressed={estDansSelection(offre)}
+              className={
+                "min-h-[72px] px-8 rounded-xl text-xl font-bold mt-2 " +
+                (estDansSelection(offre)
+                  ? "bg-vert text-white"
+                  : "border-2 border-vert text-vert")
+              }
+            >
+              <span aria-hidden="true">
+                {estDansSelection(offre) ? "✓ " : "✚ "}
+              </span>
+              {estDansSelection(offre) ? "Dans ma sélection" : "Ajouter à ma sélection"}
+            </button>
+            {messageLimite && (
+              <p className="text-red-600 text-sm" role="alert">
+                Vous avez déjà {MAX_SELECTION} offres sélectionnées.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-6 w-full max-w-3xl">
+            <button
+              onClick={precedente}
+              disabled={index === 0}
+              className="min-h-[72px] flex-1 rounded-xl border-2 border-vert text-vert text-xl font-bold disabled:opacity-30"
+            >
+              ← Précédente
+            </button>
+            <button
+              onClick={suivante}
+              disabled={index === offres.length - 1}
+              className="min-h-[72px] flex-1 rounded-xl border-2 border-vert text-vert text-xl font-bold disabled:opacity-30"
+            >
+              Suivante →
+            </button>
+          </div>
+
+          <p className="text-lg opacity-60">
+            Offre {index + 1} / {offres.length}
+          </p>
+        </main>
+
+        {selection.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-vert text-white px-6 py-4 flex items-center justify-between gap-4">
+            <p className="text-lg font-bold">
+              <span aria-hidden="true">🧺</span> {selection.length} offre
+              {selection.length > 1 ? "s" : ""} sélectionnée
+              {selection.length > 1 ? "s" : ""}
+            </p>
+            <button
+              onClick={() => setEmailFormOuvert(true)}
+              className="min-h-[56px] px-6 rounded-xl bg-jaune text-texte font-bold text-lg"
+            >
+              Recevoir par e-mail →
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
-    <div
-      className="min-h-screen w-full flex flex-col bg-fond text-texte pb-24"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onClick={reinitialiserInactivite}
-    >
-      <header className="flex flex-wrap items-center gap-3 px-6 py-4">
-        <button
-          onClick={revenirAAttente}
-          className="min-h-[64px] px-6 rounded-xl border-2 border-vert text-vert text-lg font-bold shrink-0"
-          aria-label="Retour à l'accueil de la borne"
-        >
-          ← Accueil
-        </button>
-        <p className="text-lg font-bold truncate">
-          {villeNom} · {borne.lieu}
-        </p>
-      </header>
+    <>
+      {contenu}
 
-      <main className="flex-1 flex flex-col items-center justify-center px-8 gap-6">
-        <div
-          className={
-            "w-full max-w-3xl p-10 flex flex-col gap-4 relative " +
-            (estCommercant
-              ? "bg-[#FFFDF3] rounded-lg shadow-xl border border-dashed border-vert/30 -rotate-1"
-              : "bg-white rounded-3xl shadow-xl shadow-black/5 border border-black/5")
-          }
-        >
-          {estCommercant && (
-            <span
-              className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-7 bg-jaune/90 rotate-2 shadow-sm"
-              aria-hidden="true"
+      <button
+        onClick={onTapLogo}
+        aria-hidden="true"
+        tabIndex={-1}
+        className="fixed bottom-2 right-2 w-9 h-9 rounded-full bg-vert/10 flex items-center justify-center text-vert/40 text-xs font-bold"
+      >
+        N
+      </button>
+
+      {codeSortieOuvert && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6">
+          <form
+            onSubmit={validerCodeSortie}
+            className="bg-white rounded-2xl p-8 flex flex-col gap-4 w-full max-w-xs"
+          >
+            <p className="font-bold text-lg">Code de sortie</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              autoFocus
+              value={codeSortieValeur}
+              onChange={(e) => {
+                setCodeSortieValeur(e.target.value);
+                setCodeSortieErreur(false);
+              }}
+              className="border-2 border-vert/40 rounded-lg px-4 py-3 text-xl text-center"
             />
-          )}
-
-          {infos.imageUrl && (
-            <div
-              className={
-                infos.estLogo
-                  ? "w-full max-h-40 flex items-center justify-center bg-white rounded-xl p-4"
-                  : ""
-              }
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={infos.imageUrl}
-                alt=""
-                className={
-                  infos.estLogo
-                    ? "max-h-32 max-w-full object-contain"
-                    : "w-full max-h-64 object-cover rounded-xl"
-                }
-              />
-              {infos.creditPexels && (
-                <p className="text-sm opacity-60 mt-1">
-                  Photo : {infos.creditPexels} / Pexels
-                </p>
-              )}
+            {codeSortieErreur && (
+              <p className="text-red-600 text-sm">Code incorrect.</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCodeSortieOuvert(false)}
+                className="flex-1 min-h-[48px] rounded-lg border-2 border-vert text-vert font-bold"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="flex-1 min-h-[48px] rounded-lg bg-vert text-white font-bold"
+              >
+                Valider
+              </button>
             </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {infos.contrat && (
-              <span className="bg-jaune text-texte font-bold px-4 py-2 rounded-full text-lg">
-                {infos.contrat}
-              </span>
-            )}
-            {infos.grandeEntreprise && (
-              <span className="bg-vert text-white font-bold px-4 py-2 rounded-full text-lg">
-                Offre à la une
-              </span>
-            )}
-          </div>
-          <h2 className="font-title text-4xl font-bold">{infos.titre}</h2>
-          {infos.sousTitre && <p className="text-2xl">{infos.sousTitre}</p>}
-          <p className="text-xl opacity-80">
-            {[infos.lieu, infos.tempsTravail].filter(Boolean).join(" · ")}
-          </p>
-
-          <button
-            onClick={() => {
-              if (!detailOuvert) enregistrerEvenement("interet");
-              setDetailOuvert(!detailOuvert);
-            }}
-            className="self-start underline text-lg"
-          >
-            {detailOuvert ? "Réduire" : "En savoir plus"}
-          </button>
-
-          {detailOuvert && infos.description && (
-            <p className="text-xl mt-2 whitespace-pre-line">{infos.description}</p>
-          )}
-
-          {detailOuvert && estCommercant && offre.source === "commercant" && (
-            <p className="text-lg mt-1">
-              <strong>Comment postuler :</strong> {offre.comment_postuler}
-            </p>
-          )}
-
-          <p className="text-base opacity-60 mt-2">Source : {infos.sourceLabel}</p>
-
-          <button
-            onClick={toggleSelection}
-            className={
-              "min-h-[72px] px-8 rounded-xl text-xl font-bold mt-2 " +
-              (estDansSelection(offre)
-                ? "bg-vert text-white"
-                : "border-2 border-vert text-vert")
-            }
-          >
-            {estDansSelection(offre) ? "✓ Dans ma sélection" : "✚ Ajouter à ma sélection"}
-          </button>
-          {messageLimite && (
-            <p className="text-red-600 text-sm">
-              Vous avez déjà {MAX_SELECTION} offres sélectionnées.
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-6 w-full max-w-3xl">
-          <button
-            onClick={precedente}
-            disabled={index === 0}
-            className="min-h-[72px] flex-1 rounded-xl border-2 border-vert text-vert text-xl font-bold disabled:opacity-30"
-          >
-            ← Précédente
-          </button>
-          <button
-            onClick={suivante}
-            disabled={index === offres.length - 1}
-            className="min-h-[72px] flex-1 rounded-xl border-2 border-vert text-vert text-xl font-bold disabled:opacity-30"
-          >
-            Suivante →
-          </button>
-        </div>
-
-        <p className="text-lg opacity-60">
-          Offre {index + 1} / {offres.length}
-        </p>
-      </main>
-
-      {selection.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-vert text-white px-6 py-4 flex items-center justify-between gap-4">
-          <p className="text-lg font-bold">
-            🧺 {selection.length} offre{selection.length > 1 ? "s" : ""} sélectionnée
-            {selection.length > 1 ? "s" : ""}
-          </p>
-          <button
-            onClick={() => setEmailFormOuvert(true)}
-            className="min-h-[56px] px-6 rounded-xl bg-jaune text-texte font-bold text-lg"
-          >
-            Recevoir par e-mail →
-          </button>
+          </form>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -540,7 +649,7 @@ function CarteAnnonce({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={infos.imageUrl}
-            alt=""
+            alt={infos.imageAlt}
             className={
               infos.estLogo
                 ? "max-h-24 max-w-[80%] object-contain"
